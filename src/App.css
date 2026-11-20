@@ -1,0 +1,656 @@
+.solace-app {
+  --bg: #fff;
+  --text: #202932;
+  height: 100vh;
+  min-height: 600px;
+  overflow: hidden;
+  display: flex;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 350ms ease, color 350ms ease;
+}
+html,
+body {
+  transition: background-color 450ms cubic-bezier(.4, 0, .2, 1);
+}
+.solace-theme-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 1;
+  will-change: opacity;
+}
+.solace-app button { border: 0; cursor: pointer; }
+.solace-app,
+.solace-app button,
+.solace-app input,
+.solace-app textarea { font-family: 'DM Sans', system-ui, sans-serif; }
+.solace-app h1,
+.solace-app h2,
+.solace-entry-header h1,
+.solace-companion header h2,
+.solace-editor textarea { font-family: 'Libre Caslon Display', Georgia, serif; }
+.solace-app button,
+.solace-app a { -webkit-tap-highlight-color: transparent; }
+.solace-app button:focus-visible,
+.solace-app input:focus-visible,
+.solace-app textarea:focus-visible { outline: 1px solid #9ec0da; outline-offset: 1px; }
+.solace-editor textarea:focus-visible { outline: none; }
+.solace-app button { transition: background 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
+.solace-nav button:hover,
+.solace-entry-card:hover { background: #f7f8f9; }
+.solace-new-entry:hover,
+.solace-finish:hover,
+.solace-input-row button:hover { transform: translateY(-1px); filter: brightness(.92); }
+.solace-sidebar,
+.solace-companion,
+.solace-editor { transition: background 350ms ease, border-color 350ms ease; }
+.solace-sidebar {
+  width: var(--sidebar-width, 240px); min-width: var(--sidebar-width, 240px); flex: 0 0 var(--sidebar-width, 240px); min-height: 100vh; display: flex; flex-direction: column;
+  height: 100vh; overflow-y: auto;
+  box-sizing: border-box; padding: 32px; border-right: 1px solid #e5e5e5;
+  background: #fff; box-shadow: 8px 0 30px rgba(0,0,0,.04);
+}
+.solace-resizer {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 12px;
+  align-self: stretch;
+  margin: 0 -6px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.solace-resizer::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+  border-radius: 2px;
+  background: transparent;
+  content: '';
+  transition: background 160ms ease;
+}
+.solace-resizer:hover::after,
+.solace-resizer:focus-visible::after,
+.solace-resizing .solace-resizer::after { background: #a9bdc9; }
+.solace-resizing,
+.solace-resizing * { cursor: col-resize !important; user-select: none !important; }
+.solace-resizing .solace-sidebar,
+.solace-resizing .solace-companion { transition: none; }
+.solace-brand-row,
+.solace-section-heading,
+.solace-entry-header,
+.solace-entry-status,
+.solace-editor-footer,
+.solace-profile { display: flex; align-items: center; justify-content: space-between; }
+.solace-brand { display: flex; align-items: center; gap: 12px; color: #202932; text-decoration: none; font-size: 18px; font-weight: 500; }
+.solace-brand-icon,
+.solace-avatar,
+.solace-mira-icon { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #f2f2f2; color: #555; }
+.solace-brand-icon { width: 32px; height: 32px; }
+.solace-brand-actions { display: flex; align-items: center; gap: 12px; }
+.solace-theme-toggle { width: 48px; height: 24px; padding: 4px; border-radius: 999px; background: #171717; }
+.solace-theme-thumb { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #fff; color: #171717; transition: transform 350ms ease; }
+.solace-new-entry { width: 100%; min-height: 48px; margin-top: 40px; display: flex; align-items: center; justify-content: flex-start; gap: 10px; border-radius: 12px; padding: 8px 12px; background: #171b1e; color: #fff; box-shadow: 0 8px 18px rgba(0,0,0,.08); text-align: left; }
+.solace-new-entry-icon { width: 28px; height: 28px; flex: 0 0 28px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; background: rgba(255,255,255,.1); }
+.solace-new-entry-copy { min-width: 0; display: flex; flex-direction: column; }
+.solace-new-entry-copy strong { font-size: 13px; font-weight: 600; }
+.solace-nav { margin-top: 36px; display: flex; flex-direction: column; gap: 4px; }
+.solace-nav button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #8e969e; background: transparent; font-size: 13px; text-align: left; }
+.solace-nav button.active { background: #f2f2f2; color: #222; }
+.solace-recent { position: relative; margin-top: 48px; }
+.solace-section-heading h2 { margin: 0 0 16px; color: #b1b7bd; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .18em; }
+.solace-section-heading button { color: #b1b7bd; background: transparent; }
+.solace-section-actions { display: flex; align-items: flex-start; gap: 8px; }
+.solace-section-heading-filtered h2 { max-width: 100%; margin-right: 8px; font-size: 8px; letter-spacing: .08em; line-height: 1.5; }
+.solace-archive { flex: 1; min-width: 0; height: 100vh; overflow-y: auto; box-sizing: border-box; padding: 56px clamp(28px, 5vw, 72px) 72px; background: #fff; }
+.solace-archive-inner { max-width: 1060px; margin: 0 auto; }
+.solace-archive-heading { margin-bottom: 34px; }
+.solace-archive-heading .solace-date { margin-bottom: 12px; letter-spacing: .16em; }
+.solace-archive-heading h1 { margin: 0; color: #202932; font-family: Georgia, serif; font-size: 42px; letter-spacing: -.04em; }
+.solace-archive-heading > p:last-child { margin: 10px 0 0; color: #8b969d; font-size: 13px; }
+.solace-archive-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; border-bottom: 1px solid #edf0f2; padding-bottom: 16px; }
+.solace-archive-period { display: flex; align-items: center; gap: 8px; }
+.solace-archive-picker { position: relative; }
+.solace-archive-picker-trigger { min-height: 36px; display: inline-flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid #e3e9ec !important; border-radius: 8px; padding: 0 10px 0 12px; color: #46525a; background: #fff; font-size: 12px; }
+.solace-archive-picker-trigger:hover,
+.solace-archive-picker-trigger.open { border-color: #cbd6db !important; background: #f9fbfb; }
+.solace-archive-year-trigger { min-width: 88px; }
+.solace-archive-picker-trigger svg { color: #839098; transition: transform 160ms ease; }
+.solace-archive-picker-trigger.open svg { transform: rotate(180deg); }
+@keyframes solace-picker-appear { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.solace-archive-picker-menu { position: absolute; z-index: 25; top: calc(100% + 8px); left: 0; width: 240px; border: 1px solid #e6eaed; border-radius: 12px; padding: 12px; background: #fff; box-shadow: 0 14px 36px rgba(28,42,50,.14); animation: solace-picker-appear 140ms ease-out; }
+.solace-archive-picker-menu > p { margin: 0 0 10px; color: #a0a9af; font-size: 9px; font-weight: 600; letter-spacing: .14em; }
+.solace-archive-month-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.solace-archive-month-options button,
+.solace-archive-year-options button { min-height: 34px; border-radius: 7px; color: #5c6970; background: transparent; font-size: 11px; }
+.solace-archive-month-options button:hover,
+.solace-archive-year-options button:hover { background: #f2f5f6; color: #30434d; }
+.solace-archive-month-options button.selected,
+.solace-archive-year-options button.selected { color: #fff; background: #354c58; }
+.solace-archive-year-menu { width: 132px; }
+.solace-archive-year-options { display: flex; flex-direction: column; max-height: 230px; overflow-y: auto; gap: 2px; }
+.solace-archive-year-options button { flex: 0 0 auto; padding: 0 10px; text-align: left; }
+.solace-archive-picker-menu button:focus-visible { outline: 1px solid #9ec0da; outline-offset: 1px; }
+.solace-archive-picker-menu button.selected:hover { background: #405d6b; color: #fff; }
+.solace-archive-tag-filter select { appearance: none; border: 1px solid #e3e9ec; border-radius: 8px; padding: 9px 32px 9px 11px; background-color: #fff; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237e8a91' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; color: #46525a; font-size: 12px; cursor: pointer; }
+.solace-archive-tag-filter { display: flex; align-items: center; gap: 8px; color: #7e8a91; font-size: 11px; white-space: nowrap; }
+.solace-archive-tag-filter select { min-width: 126px; }
+.solace-archive-tag-filter select:focus-visible { border-color: #a7bac4; outline: 1px solid #a7bac4; outline-offset: 1px; }
+.solace-archive-view-toggle { display: inline-flex; gap: 3px; border: 1px solid #e5eaed; border-radius: 9px; padding: 3px; background: #f7f9fa; }
+.solace-archive-view-toggle button { display: inline-flex; align-items: center; gap: 7px; border-radius: 6px; padding: 7px 10px; color: #7a858c; background: transparent; font-size: 11px; }
+.solace-archive-view-toggle button.active { background: #fff; color: #34434c; box-shadow: 0 1px 3px rgba(24,38,46,.1); }
+.solace-archive-date-filter { display: flex; align-items: center; gap: 8px; margin: -4px 0 16px; color: #64737b; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.solace-archive-date-filter button { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #76858d; background: #f0f3f4; }
+.solace-archive-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid #e8edef; border-left: 1px solid #e8edef; }
+.solace-archive-weekday { padding: 11px 12px; border-right: 1px solid #e8edef; border-bottom: 1px solid #e8edef; color: #9aa4aa; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.solace-archive-day { min-width: 0; min-height: 112px; overflow: hidden; border-right: 1px solid #e8edef; border-bottom: 1px solid #e8edef; padding: 8px; background: #fff; }
+.solace-archive-day.outside { background: #fafbfb; }
+.solace-archive-day.selected { background: #f2f6f7; }
+.solace-archive-day-number { width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #606c73; background: transparent; font-size: 11px; }
+.solace-archive-day-number:hover { background: #edf2f4; }
+.solace-archive-day-number.today { color: #42677b; box-shadow: inset 0 0 0 1px #b7cbd5; }
+.solace-archive-day.outside .solace-archive-day-number { color: #b7c0c5; }
+.solace-archive-day-entry { width: 100%; display: block; overflow: hidden; margin-top: 5px; border-radius: 5px; padding: 5px 6px; background: #edf3f5; color: #526872; font-size: 10px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.solace-archive-day-entry:hover { background: #dce8ed; }
+.solace-archive-day-more { display: block; margin: 5px 0 0 5px; color: #849198; font-size: 9px; }
+.solace-archive-selected-day { margin-top: 24px; }
+.solace-archive-selected-day h2,
+.solace-archive-list-day > header { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; color: #46525a; font-family: Georgia, serif; font-size: 17px; font-weight: 400; }
+.solace-archive-list-day > header h2 { margin: 0; font-size: inherit; font-weight: inherit; }
+.solace-archive-selected-day h2 span,
+.solace-archive-list-day > header span { color: #9aa4aa; font-family: 'DM Sans', system-ui, sans-serif; font-size: 10px; }
+.solace-archive-list { display: flex; flex-direction: column; gap: 28px; }
+.solace-archive-list-day > header { justify-content: space-between; border-bottom: 1px solid #edf0f2; padding-bottom: 10px; }
+.solace-archive-entry { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #f0f2f3; padding: 14px 10px; color: #7e8a91; background: transparent; text-align: left; }
+.solace-archive-entry:hover { border-radius: 8px; background: #f7f9fa; }
+.solace-archive-entry > svg { flex: 0 0 auto; color: #aab4ba; }
+.solace-archive-entry-copy { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.solace-archive-entry-copy strong { overflow: hidden; color: #34414a; font-family: Georgia, serif; font-size: 17px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.solace-archive-entry-copy > span { color: #929da4; font-size: 10px; }
+.solace-archive-empty { border: 1px dashed #e2e8eb; border-radius: 12px; padding: 32px 20px; color: #87949b; font-size: 13px; text-align: center; }
+.solace-entry-list { display: flex; flex-direction: column; gap: 4px; }
+.solace-entry-card { width: 100%; display: block; border-radius: 8px; padding: 12px; background: transparent; text-align: left; }
+.solace-entry-card.active { border: 1px solid #edf3f7; background: #fff; box-shadow: 0 5px 18px rgba(105,150,180,.04); }
+.solace-entry-card p { margin: 0; color: #777f87; font-size: 13px; }
+.solace-entry-card.active p { color: #3f454b; }
+.solace-entry-card span { display: block; margin-top: 6px; color: #b0b6bc; font-size: 11px; }
+.solace-search { width: 100%; margin: -4px 0 8px; border: 1px solid #e5ebef; border-radius: 8px; padding: 9px 10px; outline: 0; background: #fff; color: #59636b; font-size: 12px; }
+.solace-empty { color: #adb4ba; font-size: 12px; }
+.solace-sidebar-bottom { margin-top: auto; padding-top: 48px; }
+.solace-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.solace-tags button,
+.solace-entry-tags button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid transparent; border-radius: 999px; padding: 7px 11px; font-size: 11px; transition: transform 160ms ease, background 160ms ease, border-color 160ms ease; }
+.solace-tags button:hover { transform: translateY(-1px); }
+.solace-tags button::before,
+.solace-entry-tags button::before { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: currentColor; content: ''; opacity: .68; }
+.solace-tags button.tag-tone-sage,
+.solace-entry-tags button.tag-tone-sage { border-color: #dce9df; color: #668873; background: #f0f6f1; }
+.solace-tags button.tag-tone-rose,
+.solace-entry-tags button.tag-tone-rose { border-color: #f0dfe1; color: #a87880; background: #fbf2f3; }
+.solace-tags button.tag-tone-sky,
+.solace-entry-tags button.tag-tone-sky { border-color: #dce9f0; color: #648aa1; background: #eff6f9; }
+.solace-tags button.tag-tone-amber,
+.solace-entry-tags button.tag-tone-amber { border-color: #eee5d4; color: #9b835b; background: #f9f5eb; }
+.solace-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -8px 0 12px;
+  padding: 6px;
+  border: 1px solid #e5ebef;
+  border-radius: 9px;
+  background: #fff;
+}
+.solace-inline-form input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 4px;
+  color: #59636b;
+  font-size: 12px;
+}
+.solace-inline-form button {
+  height: 26px;
+  min-width: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: #171717;
+  color: #fff;
+  font-size: 10px;
+}
+.solace-profile { margin-top: 24px; padding-top: 16px; border-top: 1px solid #f3f5f6; gap: 12px; }
+.solace-avatar { width: 32px; height: 32px; background: #f0f5f8; color: #7898ae; font-size: 11px; }
+.solace-profile div { flex: 1; }
+.solace-profile p { margin: 0; color: #555d64; font-size: 12px; }
+.solace-profile div span { color: #aeb5bb; font-size: 10px; }
+.solace-profile button { color: #b1b7bd; background: transparent; }
+.solace-editor { flex: 1; min-width: 0; height: 100vh; overflow-y: auto; background: #fff; padding: 44px 64px; }
+.solace-editor-inner { max-width: 760px; margin: 0 auto; }
+.solace-settings-open { height: auto; min-height: 100vh; overflow: visible; }
+.solace-settings-page { flex: 1; min-width: 0; min-height: 100vh; box-sizing: border-box; background: #fff; }
+.solace-settings-topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; padding: 0 clamp(28px, 7vw, 100px); border-bottom: 1px solid #edf0f3; }
+.solace-settings-topbar .solace-brand { font-size: 15px; }
+.solace-settings-inner { max-width: 700px; margin: 0 auto; padding: 44px 28px 72px; }
+.solace-settings-back { display: flex; align-items: center; gap: 8px; padding: 8px 0; color: #78838b; background: transparent; font-size: 12px; }
+.solace-settings-header { margin: 52px 0 32px; }
+.solace-settings-header .solace-date { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; letter-spacing: .16em; }
+.solace-settings-header h1 { margin: 0; color: #202932; font-family: Georgia, serif; font-size: 42px; letter-spacing: -.04em; }
+.solace-settings-header > p:last-child { margin: 12px 0 0; color: #929ba2; font-size: 13px; }
+.solace-settings-tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; width: fit-content; max-width: 100%; margin: 0 auto -1px; overflow-x: auto; border: 1px solid #e5ebef; border-radius: 12px 12px 0 0; padding: 7px 8px 0; background: #f7f9fa; }
+.solace-settings-tabs button { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; border-bottom: 2px solid transparent; padding: 12px 16px; color: #89949c; background: transparent; font-size: 12px; }
+.solace-settings-tabs button.active { border-bottom-color: #78a5c6; color: #344957; }
+.solace-settings-card { min-height: 250px; margin-bottom: 26px; scroll-margin-top: 82px; border: 1px solid #e5ebef; border-radius: 0 14px 14px 14px; padding: 28px 30px; background: #fff; box-shadow: 0 12px 32px rgba(27,48,62,.05); }
+.solace-settings-card-header { padding-bottom: 22px; }
+.solace-settings-card-header h2 { margin: 0; color: #3e474e; font-size: 15px; font-weight: 600; }
+.solace-settings-card-header p { margin: 6px 0 0; color: #929ba2; font-size: 12px; }
+.solace-cloud-account { border-top: 1px solid #edf0f3; padding: 18px 0 20px; }
+.solace-cloud-account-copy { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.solace-cloud-account-copy h3 { margin: 0; color: #4a535a; font-size: 13px; font-weight: 500; }
+.solace-cloud-account-copy p { margin: 6px 0 0; color: #929ba2; font-size: 12px; }
+.solace-cloud-signin { display: flex; align-items: center; gap: 8px; }
+.solace-cloud-signin input { width: min(250px, 30vw); box-sizing: border-box; border: 1px solid #e5ebef; border-radius: 9px; padding: 10px 12px; background: #fff; color: #3e474e; font-size: 12px; }
+.solace-cloud-signin .solace-settings-action:disabled,
+.solace-cloud-account .solace-settings-action:disabled { cursor: wait; opacity: .6; }
+.solace-cloud-status,
+.solace-cloud-message,
+.solace-cloud-error { margin: 12px 0 0; color: #87949b; font-size: 11px; line-height: 1.5; }
+.solace-cloud-message { color: #547a64; }
+.solace-cloud-error { color: #a45b5b; }
+.solace-cloud-error p { margin: 0; color: inherit; font-size: inherit; }
+.solace-cloud-retry { margin-top: 8px; border-bottom: 1px solid currentColor !important; padding: 0 0 2px; color: inherit; background: transparent; font-size: 11px; }
+.solace-settings-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 1px solid #edf0f3; padding: 20px 0; }
+.solace-settings-row-copy h3 { margin: 0; color: #4a535a; font-size: 13px; font-weight: 500; }
+.solace-settings-row-copy p { margin: 6px 0 0; color: #929ba2; font-size: 12px; }
+.solace-settings-field { display: flex; flex-direction: column; gap: 8px; color: #68747d; font-size: 12px; }
+.solace-settings-field input,
+.solace-settings-select select { width: min(320px, 42vw); box-sizing: border-box; border: 1px solid #e5ebef; border-radius: 9px; padding: 12px; background: #fff; color: #3e474e; font-size: 13px; }
+.solace-settings-select select { cursor: pointer; }
+.solace-settings-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 0 0 auto; border: 1px solid #e5ebef !important; border-radius: 9px; padding: 10px 14px; color: #53636e; background: #fff; font-size: 12px; }
+.solace-settings-action:hover { background: #f7f9fa; }
+.solace-visibility-toggle { display: inline-flex; align-items: center; gap: 12px; flex: 0 0 auto; padding: 4px; color: #68747d; background: transparent; font-size: 12px; }
+.solace-switch-track { width: 36px; height: 21px; display: flex; align-items: center; box-sizing: border-box; border: 1px solid #d5dde2; border-radius: 999px; padding: 2px; background: #edf0f2; transition: background 180ms ease, border-color 180ms ease; }
+.solace-switch-track > span { width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.16); transition: transform 180ms ease; }
+.solace-visibility-toggle.enabled .solace-switch-track { border-color: #9bb9cb; background: #9bb9cb; }
+.solace-visibility-toggle.enabled .solace-switch-track > span { transform: translateX(15px); }
+.solace-settings-theme { width: 100%; color: #59636b; background: transparent; text-align: left; font-size: 13px; }
+.solace-theme-choice { display: inline-flex; align-items: center; gap: 9px; border: 1px solid #e5ebef; border-radius: 999px; padding: 6px 8px 6px 12px; color: #59636b; font-size: 12px; }
+.solace-theme-preview { width: 14px; height: 14px; border: 1px solid #d5dce1; border-radius: 50%; background: #fff; }
+.solace-theme-preview.dark { border-color: #333; background: #151515; }
+.solace-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+.solace-entry-header { align-items: flex-start; position: relative; }
+.solace-date { margin: 0; color: #abb2b8; font-size: 12px; letter-spacing: .04em; }
+.solace-entry-header h1 { margin: 16px 0 0; font-family: Georgia, serif; font-size: 46px; line-height: 1.1; letter-spacing: -.04em; }
+.solace-entry-title { width: min(100%, 570px); border: 0; border-bottom: 1px solid transparent; padding: 0 0 2px; outline: 0; background: transparent; color: #202932; font-family: Georgia, serif !important; font-size: inherit !important; font-weight: 600; letter-spacing: inherit; line-height: inherit; transition: border-color 180ms ease; }
+.solace-entry-title:hover { border-bottom-color: #e3e8eb; }
+.solace-entry-title:focus { border-bottom-color: #b8c5cc; }
+.solace-entry-title::placeholder { color: #aeb8bf; opacity: 1; }
+.solace-entry-title:focus-visible { outline: none; }
+.solace-entry-status { gap: 10px; padding-top: 4px; position: relative; }
+.solace-mira-home-toggle { display: flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1px solid #e8edf1 !important; border-radius: 9px; color: #68747d !important; background: transparent; font-size: 11px; white-space: nowrap; }
+.solace-mira-home-toggle:hover { background: #f7f8f9; }
+.solace-site-options { display: flex; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid #e8edf1 !important; border-radius: 9px; color: #68747d !important; background: transparent; font-size: 11px; }
+.solace-site-options:hover { background: #f7f8f9; }
+.solace-entry-status > span { display: flex; align-items: center; gap: 8px; color: #adb4ba; font-size: 11px; }
+.solace-entry-status i,
+.solace-presence i { width: 6px; height: 6px; border-radius: 50%; background: #9ec0da; }
+.solace-entry-status button { color: #b5bcc2; background: transparent; }
+.solace-options-menu { position: absolute; z-index: 20; top: 28px; right: 0; width: 170px; border: 1px solid #edf0f3; border-radius: 10px; padding: 6px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+.solace-options-menu button { width: 100%; border-radius: 7px; padding: 9px 10px; color: #68747d; background: transparent; text-align: left; font-size: 12px; }
+.solace-options-menu button.danger { color: #a65b5b; }
+.solace-entry-tags { min-height: 28px; margin-top: 52px; display: flex; align-items: center; gap: 8px; padding-bottom: 20px; border-bottom: 1px solid #eef2f4; }
+.solace-entry-tag-form { max-width: 260px; margin: 14px 0 -24px; }
+.solace-editor textarea { width: 100%; min-height: 435px; margin-top: 48px; resize: none; border: 0; outline: 0; background: transparent; color: #596168; font-family: Georgia, serif; font-size: 22px; line-height: 1.9; box-sizing: border-box; }
+.solace-app:not([data-theme="dark"]) .solace-editor textarea { color: #41494f; }
+.solace-editor textarea::placeholder { color: #78858d; opacity: 1; }
+.solace-app:not([data-theme="dark"]) .solace-nav button:not(.active) { color: #68737b; }
+.solace-app:not([data-theme="dark"]) .solace-entry-card p { color: #626c74; }
+.solace-app:not([data-theme="dark"]) .solace-entry-card.active p { color: #30383e; }
+.solace-app:not([data-theme="dark"]) .solace-profile p { color: #41494f; }
+.solace-attachment { max-width: 100%; max-height: 220px; display: block; margin-top: 20px; border-radius: 12px; object-fit: cover; }
+.solace-audio { width: 100%; margin-top: 16px; }
+.solace-editor-footer { margin-top: 32px; padding-top: 18px; border-top: 1px solid #f1f3f5; }
+.solace-editor-inner-quiet .solace-editor-footer { opacity: .68; }
+.solace-editor-footer { transition: opacity 220ms ease; }
+.solace-editor-tools { display: flex; align-items: center; gap: 20px; color: #b6bec4; }
+.solace-editor-tools button { color: #b6bec4; background: transparent; }
+.solace-editor-tools button.recording { color: #bd6565; animation: pulse 1.2s infinite; }
+.solace-editor-tools span { font-size: 11px; }
+@keyframes pulse { 50% { opacity: .45; } }
+.solace-finish { display: flex; align-items: center; gap: 8px; padding: 11px 16px; border: 1px solid #e8edf0 !important; border-radius: 10px; background: #f5f7f8; color: #52616a; font-size: 12px; box-shadow: none; }
+.solace-finish:hover,
+.solace-finish.finished { background: #edf2f4; color: #62727b; }
+.solace-finish:disabled { cursor: default; opacity: .8; }
+.solace-prompt { margin-top: 36px; display: flex; align-items: center; gap: 10px; padding-top: 16px; color: #c1c8cc; }
+.solace-prompt p { margin: 0; color: #c0c6ca; font-size: 11px; }
+.solace-prompt span { color: #aeb7bd; }
+.solace-companion { width: var(--companion-width, 330px); min-width: var(--companion-width, 330px); flex: 0 0 var(--companion-width, 330px); height: 100vh; min-height: 600px; box-sizing: border-box; display: flex; flex-direction: column; padding: 40px; border-left: 1px solid #f0f2f3; background: #fdfdfc; box-shadow: none; }
+.solace-companion header { display: flex; align-items: flex-start; justify-content: space-between; }
+.solace-companion-actions { display: flex; align-items: center; gap: 14px; }
+.solace-hide-mira { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: #9aa5ab; background: transparent; }
+.solace-hide-mira:hover { color: #65737c; background: #f0f3f4; }
+.solace-companion header p { margin: 0; color: #b1b7bd; font-size: 10px; text-transform: uppercase; letter-spacing: .18em; }
+.solace-companion header h2 { margin: 16px 0 0; font-family: Georgia, serif; font-size: 30px; }
+.solace-presence { display: flex; align-items: center; gap: 8px; color: #abb3b9; font-size: 11px; }
+.solace-chat { flex: 1; min-height: 0; margin-top: 48px; display: flex; flex-direction: column; align-items: stretch; gap: 36px; overflow-y: auto; padding: 0 4px 16px 0; }
+.solace-message { display: flex; gap: 12px; }
+.solace-message.user { justify-content: flex-end; }
+.solace-mira-icon { width: 28px; height: 28px; flex: 0 0 28px; }
+.solace-message > div:last-child { max-width: 245px; border-radius: 16px 16px 16px 4px; padding: 16px 20px; background: #f7f7f7; color: #68747d; font-size: 13px; line-height: 24px; }
+.solace-message.user > div { max-width: 235px; border-radius: 16px 16px 4px 16px; background: #f0f0f0; color: #5d8297; }
+.solace-conversation-toggle { align-self: flex-start; padding: 4px 0; color: #9aa5ab; background: transparent; font-size: 11px; }
+.solace-chat-compose { margin-top: 24px; }
+.solace-suggestions { margin-top: 12px; }
+.solace-suggestions summary { width: fit-content; display: flex; align-items: center; gap: 7px; cursor: pointer; color: #9aa5ab; font-size: 11px; list-style: none; }
+.solace-suggestions summary::-webkit-details-marker { display: none; }
+.solace-suggestions[open] summary { margin-bottom: 10px; }
+.solace-suggestions > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.solace-suggestions button { border: 1px solid #e9edef; border-radius: 999px; padding: 7px 10px; color: #859198; background: transparent; font-size: 11px; }
+.solace-input-row { display: flex; align-items: center; gap: 8px; border: 1px solid #dfe7ec; border-radius: 12px; padding: 8px; background: #fff; }
+.solace-input-row input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #59636b; font-size: 13px; }
+.solace-input-row button { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #000; color: #fff; }
+.solace-chat-compose > p { margin: 12px 0 0; text-align: center; color: #c1c8cc; font-size: 10px; }
+.solace-sidebar::-webkit-scrollbar,
+.solace-editor::-webkit-scrollbar,
+.solace-chat::-webkit-scrollbar { width: 5px; }
+.solace-sidebar::-webkit-scrollbar-thumb,
+.solace-editor::-webkit-scrollbar-thumb,
+.solace-chat::-webkit-scrollbar-thumb { background: #dfe4e8; border-radius: 999px; }
+.solace-app[data-theme="dark"] { --bg: #0a0a0a; --text: #f5f5f5; background: #0a0a0a; color: #f5f5f5; }
+.solace-app[data-theme="dark"] .solace-sidebar,
+.solace-app[data-theme="dark"] .solace-editor { background: #0a0a0a; border-color: #2a2a2a; box-shadow: none; }
+.solace-app[data-theme="dark"] .solace-companion { background: #0d0e0e; border-color: #202324; box-shadow: none; }
+.solace-app[data-theme="dark"] .solace-resizer:hover::after,
+.solace-app[data-theme="dark"] .solace-resizer:focus-visible::after,
+.solace-app[data-theme="dark"].solace-resizing .solace-resizer::after { background: #657f8d; }
+.solace-app[data-theme="dark"] .solace-theme-toggle { background: #f5f5f5; }
+.solace-app[data-theme="dark"] .solace-theme-thumb { transform: translateX(22px); background: #0a0a0a; color: #fff; }
+.solace-app[data-theme="dark"] h1,
+.solace-app[data-theme="dark"] h2,
+.solace-app[data-theme="dark"] p,
+.solace-app[data-theme="dark"] span,
+.solace-app[data-theme="dark"] a,
+.solace-app[data-theme="dark"] textarea,
+.solace-app[data-theme="dark"] input { color: #f5f5f5; }
+.solace-app[data-theme="dark"] textarea,
+.solace-app[data-theme="dark"] input { background: transparent; }
+.solace-app[data-theme="dark"] .solace-brand-icon,
+.solace-app[data-theme="dark"] .solace-avatar,
+.solace-app[data-theme="dark"] .solace-mira-icon { background: #252525; color: #d8d8d8; }
+.solace-app[data-theme="dark"] .solace-nav button.active,
+.solace-app[data-theme="dark"] .solace-entry-card.active,
+.solace-app[data-theme="dark"] .solace-options-menu,
+.solace-app[data-theme="dark"] .solace-input-row,
+.solace-app[data-theme="dark"] .solace-search,
+.solace-app[data-theme="dark"] .solace-suggestions button { background: #171717; }
+.solace-app[data-theme="dark"] .solace-entry-card.active { border-color: #303030; box-shadow: none; }
+.solace-app[data-theme="dark"] .solace-entry-card.active,
+.solace-app[data-theme="dark"] .solace-entry-card.active:hover {
+  background: #171717;
+  border-color: #303030;
+}
+.solace-app[data-theme="dark"] .solace-entry-card:not(.active):hover {
+  background: #151515;
+}
+.solace-app[data-theme="dark"] .solace-nav button:hover {
+  background: #151515;
+}
+.solace-app[data-theme="dark"] .solace-nav button.active:hover {
+  background: #171717;
+}
+.solace-app[data-theme="dark"] .solace-archive { background: #0a0a0a; }
+.solace-app[data-theme="dark"] .solace-archive-heading h1 { color: #f5f5f5; }
+.solace-app[data-theme="dark"] .solace-archive-heading > p:last-child { color: #a4afb5; }
+.solace-app[data-theme="dark"] .solace-archive-toolbar { border-color: #252a2d; }
+.solace-app[data-theme="dark"] .solace-archive-picker-trigger { border-color: #343a3d !important; background: #151719; color: #e1e6e9; }
+.solace-app[data-theme="dark"] .solace-archive-picker-trigger:hover,
+.solace-app[data-theme="dark"] .solace-archive-picker-trigger.open { border-color: #4a555a !important; background: #1c2123; }
+.solace-app[data-theme="dark"] .solace-archive-picker-trigger svg { color: #aab4b9; }
+.solace-app[data-theme="dark"] .solace-archive-picker-menu { border-color: #343a3d; background: #151819; box-shadow: 0 14px 36px rgba(0,0,0,.45); }
+.solace-app[data-theme="dark"] .solace-archive-picker-menu > p { color: #879399; }
+.solace-app[data-theme="dark"] .solace-archive-month-options button,
+.solace-app[data-theme="dark"] .solace-archive-year-options button { color: #c1cbd0; }
+.solace-app[data-theme="dark"] .solace-archive-month-options button:hover,
+.solace-app[data-theme="dark"] .solace-archive-year-options button:hover { background: #252c30; color: #f1f4f5; }
+.solace-app[data-theme="dark"] .solace-archive-month-options button.selected,
+.solace-app[data-theme="dark"] .solace-archive-year-options button.selected { background: #c2d5de; color: #111719; }
+.solace-app[data-theme="dark"] .solace-archive-picker-menu button.selected:hover { background: #d3e1e7; color: #111719; }
+.solace-app[data-theme="dark"] .solace-archive-tag-filter select { border-color: #343a3d; background-color: #151719; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23aab4b9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); color: #e1e6e9; }
+.solace-app[data-theme="dark"] .solace-archive-tag-filter { color: #aab4b9; }
+.solace-app[data-theme="dark"] .solace-archive-view-toggle { border-color: #303639; background: #141718; }
+.solace-app[data-theme="dark"] .solace-archive-view-toggle button { color: #aab4b9; }
+.solace-app[data-theme="dark"] .solace-archive-view-toggle button.active { background: #262c2f; color: #f0f3f4; box-shadow: none; }
+.solace-app[data-theme="dark"] .solace-archive-date-filter { color: #aebac0; }
+.solace-app[data-theme="dark"] .solace-archive-date-filter button { background: #22282b; color: #c8d0d4; }
+.solace-app[data-theme="dark"] .solace-archive-calendar { border-color: #2b3235; }
+.solace-app[data-theme="dark"] .solace-archive-weekday { border-color: #2b3235; color: #879399; }
+.solace-app[data-theme="dark"] .solace-archive-day { border-color: #2b3235; background: #0d0f10; }
+.solace-app[data-theme="dark"] .solace-archive-day.outside { background: #0a0b0c; }
+.solace-app[data-theme="dark"] .solace-archive-day.selected { background: #171d20; }
+.solace-app[data-theme="dark"] .solace-archive-day-number { color: #c2cbd0; }
+.solace-app[data-theme="dark"] .solace-archive-day-number:hover { background: #252c30; }
+.solace-app[data-theme="dark"] .solace-archive-day-number.today { color: #b8d2df; box-shadow: inset 0 0 0 1px #526b78; }
+.solace-app[data-theme="dark"] .solace-archive-day.outside .solace-archive-day-number { color: #667176; }
+.solace-app[data-theme="dark"] .solace-archive-day-entry { background: #1d292e; color: #bdd0d9; }
+.solace-app[data-theme="dark"] .solace-archive-day-entry:hover { background: #283940; }
+.solace-app[data-theme="dark"] .solace-archive-day-more { color: #9aa7ad; }
+.solace-app[data-theme="dark"] .solace-archive-selected-day h2,
+.solace-app[data-theme="dark"] .solace-archive-list-day > header { color: #e0e6e9; }
+.solace-app[data-theme="dark"] .solace-archive-selected-day h2 span,
+.solace-app[data-theme="dark"] .solace-archive-list-day > header span { color: #99a5ab; }
+.solace-app[data-theme="dark"] .solace-archive-list-day > header,
+.solace-app[data-theme="dark"] .solace-archive-entry { border-color: #252b2e; }
+.solace-app[data-theme="dark"] .solace-archive-entry:hover { background: #141819; }
+.solace-app[data-theme="dark"] .solace-archive-entry > svg { color: #88969d; }
+.solace-app[data-theme="dark"] .solace-archive-entry-copy strong { color: #e0e6e9; }
+.solace-app[data-theme="dark"] .solace-archive-entry-copy > span { color: #9aa5aa; }
+.solace-app[data-theme="dark"] .solace-archive-empty { border-color: #333a3e; color: #a7b2b7; }
+.solace-app[data-theme="dark"] .solace-message > div:last-child { background: #171717; color: #c5cbd0; border: 1px solid #242424; box-shadow: none; }
+.solace-app[data-theme="dark"] .solace-message.user > div { background: #202020; color: #b5cbd7; }
+.solace-app[data-theme="dark"] .solace-entry-tags,
+.solace-app[data-theme="dark"] .solace-editor-footer,
+.solace-app[data-theme="dark"] .solace-prompt,
+.solace-app[data-theme="dark"] .solace-profile { border-color: #202324; }
+.solace-app[data-theme="dark"] .solace-brand,
+.solace-app[data-theme="dark"] .solace-nav button,
+.solace-app[data-theme="dark"] .solace-entry-card p,
+.solace-app[data-theme="dark"] .solace-entry-card span,
+.solace-app[data-theme="dark"] .solace-profile p,
+.solace-app[data-theme="dark"] .solace-profile div span,
+.solace-app[data-theme="dark"] .solace-date,
+.solace-app[data-theme="dark"] .solace-entry-status > span,
+.solace-app[data-theme="dark"] .solace-editor-tools,
+.solace-app[data-theme="dark"] .solace-editor-tools span,
+.solace-app[data-theme="dark"] .solace-prompt p,
+.solace-app[data-theme="dark"] .solace-prompt span,
+.solace-app[data-theme="dark"] .solace-presence,
+.solace-app[data-theme="dark"] .solace-chat-compose > p,
+.solace-app[data-theme="dark"] .solace-empty { color: #c3c9ce; }
+.solace-app[data-theme="dark"] .solace-nav button:not(.active),
+.solace-app[data-theme="dark"] .solace-entry-card:not(.active) p,
+.solace-app[data-theme="dark"] .solace-entry-card:not(.active) span { color: #aeb5bb; }
+.solace-app[data-theme="dark"] .solace-nav button.active,
+.solace-app[data-theme="dark"] .solace-entry-card.active p,
+.solace-app[data-theme="dark"] .solace-entry-card.active span { color: #8f999f; }
+.solace-app[data-theme="dark"] .solace-section-heading button,
+.solace-app[data-theme="dark"] .solace-profile button,
+.solace-app[data-theme="dark"] .solace-entry-status button,
+.solace-app[data-theme="dark"] .solace-editor-tools button { color: #c8ced3; }
+.solace-app[data-theme="dark"] .solace-tags button,
+.solace-app[data-theme="dark"] .solace-entry-tags button,
+.solace-app[data-theme="dark"] .solace-suggestions button,
+.solace-app[data-theme="dark"] .solace-options-menu button { color: #c3cbd1; border-color: #33383d; }
+.solace-app[data-theme="dark"] .solace-tags button.tag-tone-sage,
+.solace-app[data-theme="dark"] .solace-entry-tags button.tag-tone-sage { border-color: #334339; color: #b1c8b7; background: #1c2820; }
+.solace-app[data-theme="dark"] .solace-tags button.tag-tone-rose,
+.solace-app[data-theme="dark"] .solace-entry-tags button.tag-tone-rose { border-color: #49363a; color: #d4b0b4; background: #2a2022; }
+.solace-app[data-theme="dark"] .solace-tags button.tag-tone-sky,
+.solace-app[data-theme="dark"] .solace-entry-tags button.tag-tone-sky { border-color: #33434b; color: #b1c9d5; background: #1c272d; }
+.solace-app[data-theme="dark"] .solace-tags button.tag-tone-amber,
+.solace-app[data-theme="dark"] .solace-entry-tags button.tag-tone-amber { border-color: #4a4231; color: #d0c09b; background: #2b271d; }
+.solace-app[data-theme="dark"] .solace-options-menu button.danger { color: #e2a2a2; }
+.solace-app[data-theme="dark"] .solace-options-menu button:hover { background: #232323; }
+.solace-app[data-theme="dark"] .solace-editor textarea { color: #e8eaec; caret-color: #f5f5f5; }
+.solace-app[data-theme="dark"] .solace-editor textarea::placeholder,
+.solace-app[data-theme="dark"] .solace-input-row input::placeholder,
+.solace-app[data-theme="dark"] .solace-search::placeholder { color: #777f86; }
+.solace-app[data-theme="dark"] .solace-finish,
+.solace-app[data-theme="dark"] .solace-new-entry,
+.solace-app[data-theme="dark"] .solace-input-row button { background: #f5f5f5; color: #111; }
+.solace-app[data-theme="dark"] .solace-new-entry { background: #e5e9e7; color: #17201a; }
+.solace-app[data-theme="dark"] .solace-new-entry-copy,
+.solace-app[data-theme="dark"] .solace-new-entry-copy strong { color: #17201a; }
+.solace-app[data-theme="dark"] .solace-new-entry-icon { border-color: rgba(0,0,0,.16); background: rgba(0,0,0,.08); color: #17201a; }
+.solace-app[data-theme="dark"] .solace-entry-title { color: #f5f5f5; }
+.solace-app[data-theme="dark"] .solace-entry-title::placeholder { color: #a4afb5; }
+.solace-app[data-theme="dark"] .solace-editor textarea::placeholder { color: #a4afb5; }
+.solace-app[data-theme="dark"] .solace-entry-title:hover { border-bottom-color: #343c40; }
+.solace-app[data-theme="dark"] .solace-entry-title:focus { border-bottom-color: #62727a; }
+.solace-app[data-theme="dark"] .solace-finish,
+.solace-app[data-theme="dark"] .solace-finish.finished { border-color: #343a3d !important; background: #1b1f21; color: #d3d8dc; }
+.solace-app[data-theme="dark"] .solace-finish:hover,
+.solace-app[data-theme="dark"] .solace-new-entry:hover,
+.solace-app[data-theme="dark"] .solace-input-row button:hover { background: #dfe3e5; }
+.solace-app[data-theme="dark"] .solace-new-entry:hover { background: #d5dcd8; }
+.solace-app[data-theme="dark"] .solace-finish:hover { background: #252a2d; }
+.solace-app[data-theme="dark"] .solace-entry-status > span { color: #9ea8ad; }
+.solace-app[data-theme="dark"] .solace-conversation-toggle,
+.solace-app[data-theme="dark"] .solace-suggestions summary { color: #a0aaaf; }
+.solace-app[data-theme="dark"] .solace-prompt p,
+.solace-app[data-theme="dark"] .solace-prompt span { color: #8d989e; }
+.solace-app[data-theme="dark"] .solace-suggestions button { border-color: #33383d; background: transparent; color: #c3cbd1; }
+.solace-app[data-theme="dark"] .solace-sidebar::-webkit-scrollbar-thumb,
+.solace-app[data-theme="dark"] .solace-editor::-webkit-scrollbar-thumb,
+.solace-app[data-theme="dark"] .solace-chat::-webkit-scrollbar-thumb { background: #3b4146; }
+.solace-app[data-theme="dark"] .solace-inline-form {
+  border-color: #303030;
+  background: #171717;
+}
+.solace-app[data-theme="dark"] .solace-inline-form input {
+  color: #f5f5f5;
+}
+.solace-app[data-theme="dark"] .solace-inline-form button {
+  background: #f5f5f5;
+  color: #111;
+}
+.solace-app[data-theme="dark"] .solace-settings-page { background: #0a0a0a; }
+.solace-app[data-theme="dark"] .solace-settings-topbar { border-color: #2a2a2a; }
+.solace-app[data-theme="dark"] .solace-settings-back,
+.solace-app[data-theme="dark"] .solace-settings-field { color: #d3d8dc; }
+.solace-app[data-theme="dark"] .solace-settings-topbar .solace-brand { color: #f5f5f5; }
+.solace-app[data-theme="dark"] .solace-site-options { border-color: #33383d !important; color: #c8ced3 !important; }
+.solace-app[data-theme="dark"] .solace-site-options:hover { background: #171717; }
+.solace-app[data-theme="dark"] .solace-mira-home-toggle { border-color: #33383d !important; color: #c8ced3 !important; }
+.solace-app[data-theme="dark"] .solace-mira-home-toggle:hover { background: #171717; }
+.solace-app[data-theme="dark"] .solace-settings-header h1 { color: #f5f5f5; }
+.solace-app[data-theme="dark"] .solace-settings-header > p:last-child,
+.solace-app[data-theme="dark"] .solace-settings-card-header p,
+.solace-app[data-theme="dark"] .solace-settings-row-copy p { color: #aeb5bb; }
+.solace-app[data-theme="dark"] .solace-settings-tabs { border-color: #30363b; background: #141719; }
+.solace-app[data-theme="dark"] .solace-settings-tabs button { color: #aeb5bb; }
+.solace-app[data-theme="dark"] .solace-settings-tabs button.active { color: #f5f5f5; border-bottom-color: #83b3d2; }
+.solace-app[data-theme="dark"] .solace-settings-card { border-color: #30363b; background: #111416; box-shadow: 0 12px 32px rgba(0,0,0,.18); }
+.solace-app[data-theme="dark"] .solace-settings-card-header h2,
+.solace-app[data-theme="dark"] .solace-settings-row-copy h3,
+.solace-app[data-theme="dark"] .solace-cloud-account-copy h3 { color: #e5e9ec; }
+.solace-app[data-theme="dark"] .solace-settings-row,
+.solace-app[data-theme="dark"] .solace-cloud-account { border-color: #2a3034; }
+.solace-app[data-theme="dark"] .solace-cloud-account-copy p,
+.solace-app[data-theme="dark"] .solace-cloud-status { color: #aeb5bb; }
+.solace-app[data-theme="dark"] .solace-cloud-message { color: #a9d0b5; }
+.solace-app[data-theme="dark"] .solace-cloud-error { color: #e2a2a2; }
+.solace-app[data-theme="dark"] .solace-cloud-signin input { border-color: #33383d; background: #171717; color: #f5f5f5; }
+.solace-app[data-theme="dark"] .solace-settings-field input,
+.solace-app[data-theme="dark"] .solace-settings-select select { border-color: #33383d; background: #171717; color: #f5f5f5; }
+.solace-app[data-theme="dark"] .solace-settings-action { border-color: #33383d !important; color: #d3d8dc; background: #171717; }
+.solace-app[data-theme="dark"] .solace-settings-action:hover { background: #222; }
+.solace-app[data-theme="dark"] .solace-visibility-toggle { color: #d3d8dc; }
+.solace-app[data-theme="dark"] .solace-switch-track { border-color: #4a5155; background: #282d30; }
+.solace-app[data-theme="dark"] .solace-switch-track > span { background: #e9edef; }
+.solace-app[data-theme="dark"] .solace-visibility-toggle.enabled .solace-switch-track { border-color: #63849a; background: #63849a; }
+.solace-app[data-theme="dark"] .solace-hide-mira { color: #aab4b9; }
+.solace-app[data-theme="dark"] .solace-hide-mira:hover { color: #e1e6e9; background: #1b2022; }
+.solace-app[data-theme="dark"] .solace-theme-choice { border-color: #33383d; color: #d3d8dc; }
+.solace-app,
+.solace-app * {
+  transition-property: background-color, color, border-color, box-shadow;
+  transition-duration: 450ms;
+  transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+}
+.solace-theme-toggle,
+.solace-theme-thumb {
+  transition-property: background-color, color, border-color, transform;
+  transition-duration: 450ms;
+  transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+}
+.solace-app > .solace-editor,
+.solace-app > .solace-editor * {
+  transition-duration: 240ms;
+}
+@media (max-width: 1180px) {
+  .solace-sidebar { width: 240px; min-width: 240px; flex-basis: auto; }
+  .solace-companion { width: 330px; min-width: 330px; flex-basis: auto; }
+  .solace-editor { padding: 44px 40px; }
+}
+@media (max-width: 1180px) {
+  .solace-app { height: auto; min-height: 100vh; overflow: visible; flex-direction: column; }
+  .solace-sidebar { width: 100%; min-width: 0; min-height: auto; border-right: 0; border-bottom: 1px solid #e5e5e5; }
+  .solace-resizer { display: none; }
+  .solace-sidebar-bottom { display: none; }
+  .solace-editor { min-height: 700px; }
+  .solace-settings-page { min-height: 100vh; }
+  .solace-companion { width: 100%; min-width: 0; min-height: 600px; border-left: 0; border-top: 1px solid #e4edf3; }
+}
+@media (max-width: 600px) {
+  .solace-editor { padding: 32px 20px; }
+  .solace-settings-topbar { min-height: 64px; padding: 0 20px; }
+  .solace-settings-inner { padding: 36px 20px 56px; }
+  .solace-settings-header { margin-top: 40px; }
+  .solace-settings-header h1 { font-size: 36px; }
+  .solace-settings-card { padding: 22px 18px; }
+  .solace-settings-row { align-items: flex-start; flex-direction: column; gap: 16px; }
+  .solace-cloud-account-copy,
+  .solace-cloud-signin { align-items: stretch; flex-direction: column; }
+  .solace-cloud-signin input { width: 100%; }
+  .solace-settings-field,
+  .solace-settings-field input,
+  .solace-settings-select,
+  .solace-settings-select select { width: 100%; }
+  .solace-entry-header h1,
+  .solace-entry-title { font-size: 34px !important; }
+  .solace-entry-status { flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+  .solace-mira-home-toggle,
+  .solace-site-options { padding: 7px 8px; }
+  .solace-mira-home-toggle span,
+  .solace-site-options span { display: none; }
+  .solace-entry-status > span { display: none; }
+  .solace-editor textarea { min-height: 360px; font-size: 18px; }
+  .solace-companion { min-height: 520px; padding: 32px 20px; }
+  .solace-sidebar { padding: 24px 20px; }
+  .solace-recent { margin-top: 32px; }
+  .solace-archive { height: auto; min-height: 100vh; padding: 36px 16px 48px; }
+  .solace-archive-heading { margin-bottom: 26px; }
+  .solace-archive-heading h1 { font-size: 36px; }
+  .solace-archive-toolbar { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .solace-archive-period { width: 100%; }
+  .solace-archive-period { width: 100%; }
+  .solace-archive-picker:first-child { flex: 1; }
+  .solace-archive-picker-trigger { width: 100%; }
+  .solace-archive-year-trigger { min-width: 88px; }
+  .solace-archive-month-menu { width: min(240px, calc(100vw - 48px)); }
+  .solace-archive-tag-filter { width: 100%; justify-content: space-between; }
+  .solace-archive-tag-filter select { min-width: 0; flex: 1; }
+  .solace-archive-calendar { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .solace-archive-weekday { padding: 8px 2px; font-size: 8px; text-align: center; }
+  .solace-archive-day { min-height: 68px; padding: 3px; }
+  .solace-archive-day-number { width: 22px; height: 22px; margin: 0 auto; font-size: 10px; }
+  .solace-archive-day-entry { margin-top: 3px; padding: 4px 3px; font-size: 8px; }
+  .solace-archive-day-more { margin-left: 2px; font-size: 8px; }
+  .solace-archive-date-filter { align-items: flex-start; font-size: 9px; }
+}
