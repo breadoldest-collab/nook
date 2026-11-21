@@ -878,3 +878,68 @@ body {
   background: rgba(82, 99, 101, 0.06);
   color: var(--text, #202932);
 }
+
+/* Brand and Gemini Logo styling */
+.solace-brand-icon {
+  width: 30px !important;
+  height: 30px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  background: #000 !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.solace-brand-logo-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: block;
+}
+
+.solace-companion-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.solace-companion-footer p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted, #728080);
+}
+
+.solace-gemini-badge-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(23, 27, 30, 0.04);
+  transition: opacity 180ms ease, background 180ms ease;
+}
+
+.solace-gemini-badge-wrap:hover {
+  background: rgba(23, 27, 30, 0.08);
+}
+
+.solace-app[data-theme="dark"] .solace-gemini-badge-wrap {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.solace-app[data-theme="dark"] .solace-gemini-badge-wrap:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.solace-gemini-logo-img {
+  height: 16px;
+  width: auto;
+  border-radius: 3px;
+  object-fit: contain;
+  display: block;
+}

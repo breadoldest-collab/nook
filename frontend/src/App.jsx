@@ -13,7 +13,6 @@ import {
   Download,
   Eye,
   EyeOff,
-  Feather,
   Image,
   List,
   Mic,
@@ -54,8 +53,9 @@ const splashCursorColors = {
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
 const GEMINI_MODEL = 'models/gemini-flash-latest'
 
-async function askGemini(companionName, conversationHistory, currentEntryBody, userMessage) {
-  if (!GEMINI_API_KEY) return null
+async function askGemini(companionName, conversationHistory, currentEntryBody, userMessage, customKey) {
+  const activeKey = customKey || (typeof window !== "undefined" ? localStorage.getItem("solace-gemini-key") : null) || GEMINI_API_KEY
+  if (!activeKey) return null
   const entryContext = currentEntryBody?.trim()
     ? `The user is currently writing a journal entry:\n"""\n${currentEntryBody.slice(0, 1200)}\n"""\n\n`
     : ''
@@ -64,7 +64,7 @@ async function askGemini(companionName, conversationHistory, currentEntryBody, u
   ).join('\n')
   const systemPrompt = `You are ${companionName}, a warm, emotionally intelligent journaling companion embedded in a private journaling app called Nook. Your role is to gently support the user's self-reflection. Keep replies short (1-3 sentences), warm, non-judgmental, and grounded. Never give clinical advice. Use the user's journal context to personalize your responses. Never repeat back the same phrase twice in a row.\n\n${entryContext}Recent conversation:\n${recentHistory}`
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${GEMINI_MODEL}:generateContent?key=${activeKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -282,6 +282,15 @@ function loadEntries() {
   } catch {
     return seedEntries
   }
+}
+
+
+function NookBrandIcon() {
+  return (
+    <span className="solace-brand-icon">
+      <img src={`${import.meta.env.BASE_URL}nook-logo.png`} alt="Nook logo" className="solace-brand-logo-img" />
+    </span>
+  )
 }
 
 export default function App() {
@@ -819,7 +828,7 @@ export default function App() {
     setMessage('')
     setMiraTyping(true)
     const currentMessages = [...messages, userMsg]
-    askGemini(companionName, currentMessages, entry, text).then((aiReply) => {
+    askGemini(companionName, currentMessages, entry, text, geminiApiKey).then((aiReply) => {
       let reply = aiReply
       if (!reply) {
         const lower = text.toLowerCase()
@@ -1117,7 +1126,7 @@ export default function App() {
             <a className="solace-brand" href="#welcome" onClick={(event) => {
               event.preventDefault()
               setView('landing')
-            }}><span className="solace-brand-icon"><Feather size={15} /></span>Nook</a>
+            }}><NookBrandIcon />Nook</a>
             <div className="solace-brand-actions">
               <button className="solace-theme-toggle" type="button" aria-label="Toggle dark mode" onClick={toggleTheme}>
                 <span className="solace-theme-thumb"><Sun size={10} /></span>
@@ -1212,7 +1221,7 @@ export default function App() {
           />
           <header className="solace-login-topbar">
             <a className="solace-brand" href="#welcome" aria-label="Nook home">
-              <span className="solace-brand-icon"><Feather size={15} /></span>Nook
+              <NookBrandIcon />Nook
             </a>
             <div className="solace-login-topbar-actions">
               <button className="solace-theme-toggle" type="button" aria-label="Toggle dark mode" onClick={toggleTheme}>
@@ -1295,7 +1304,7 @@ export default function App() {
             <a className="solace-brand" href="#today" onClick={(event) => {
               event.preventDefault()
               setView('today')
-            }}><span className="solace-brand-icon"><Feather size={15} /></span>Nook</a>
+            }}><NookBrandIcon />Nook</a>
             <button className="solace-settings-back" onClick={() => setView('today')}><ArrowLeft size={15} />Back to journal</button>
           </div>
           <div className="solace-settings-inner">
@@ -1497,6 +1506,27 @@ export default function App() {
                   <span>{miraVisible ? 'Shown' : 'Hidden'}</span>
                   <span className="solace-switch-track"><span /></span>
                 </button>
+              </div>
+              <div className="solace-settings-row">
+                <div className="solace-settings-row-copy">
+                  <h3>Gemini API Key</h3>
+                  <p>Add your Google Gemini API key to enable AI reflection.</p>
+                </div>
+                <label className="solace-settings-field">
+                  <span className="solace-visually-hidden">Gemini API Key</span>
+                  <input
+                    type="password"
+                    aria-label="Gemini API Key"
+                    value={geminiApiKey}
+                    onChange={(event) => {
+                      const key = event.target.value.trim()
+                      setGeminiApiKey(key)
+                      if (key) localStorage.setItem('solace-gemini-key', key)
+                      else localStorage.removeItem('solace-gemini-key')
+                    }}
+                    placeholder={GEMINI_API_KEY ? "•••••••••••••••• (Default key connected)" : "Paste Gemini API key"}
+                  />
+                </label>
               </div>
               <div className="solace-settings-row">
                 <div className="solace-settings-row-copy">
@@ -1855,7 +1885,12 @@ export default function App() {
               }}>Find a pattern</button>
             </div>
           </details>
-          <p>{companionName} is here to support your reflection.</p>
+          <div className="solace-companion-footer">
+            <p>{companionName} is here to support your reflection.</p>
+            <div className="solace-gemini-badge-wrap" title="Powered by Google Gemini">
+              <img src={`${import.meta.env.BASE_URL}gemini-badge.png`} alt="Powered by Google Gemini" className="solace-gemini-logo-img" />
+            </div>
+          </div>
         </div>
       </aside>
       </>}
