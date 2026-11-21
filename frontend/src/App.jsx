@@ -7,6 +7,7 @@ import {
   Bookmark,
   BookOpen,
   CalendarDays,
+  Check,
   ChevronDown,
   Database,
   Download,
@@ -27,6 +28,7 @@ import {
   X,
 } from 'lucide-react'
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient'
+import SplashCursor from './components/SplashCursor'
 import './App.css'
 
 const initialEntry = `Today felt softer than usual. I left my phone at home and took the long way back from the market. The air had that almost-rain smell, and for once I didn’t feel the need to hurry through it.
@@ -44,6 +46,138 @@ const defaultMessages = [
   { role: 'user', text: 'I noticed details I usually rush past. It made the walk feel like its own small experience.' },
   { role: 'companion', text: 'That sounds meaningful. I’ll remember that slowing down helped you notice what was already there.' },
 ]
+const splashCursorColors = {
+  light: ['#171717'],
+  dark: ['#e8e8e8'],
+}
+
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
+const GEMINI_MODEL = 'models/gemini-flash-latest'
+
+async function askGemini(companionName, conversationHistory, currentEntryBody, userMessage) {
+  if (!GEMINI_API_KEY) return null
+  const entryContext = currentEntryBody?.trim()
+    ? `The user is currently writing a journal entry:\n"""\n${currentEntryBody.slice(0, 1200)}\n"""\n\n`
+    : ''
+  const recentHistory = conversationHistory.slice(-10).map((m) =>
+    `${m.role === 'user' ? 'User' : companionName}: ${m.text}`
+  ).join('\n')
+  const systemPrompt = `You are ${companionName}, a warm, emotionally intelligent journaling companion embedded in a private journaling app called Nook. Your role is to gently support the user's self-reflection. Keep replies short (1-3 sentences), warm, non-judgmental, and grounded. Never give clinical advice. Use the user's journal context to personalize your responses. Never repeat back the same phrase twice in a row.\n\n${entryContext}Recent conversation:\n${recentHistory}`
+
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+      generationConfig: { maxOutputTokens: 180, temperature: 0.85 },
+    }),
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null
+}
+
+function loadGuestUser() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('solace-guest-user'))
+    if (saved?.username) return saved
+  } catch {}
+  return null
+}
+
+function NookDropdown({ ariaLabel, className = '', menuTitle, onChange, options, value }) {
+  const [open, setOpen] = useState(false)
+  const dropdownRef = useRef(null)
+  const triggerRef = useRef(null)
+  const selectedOption = options.find((option) => option.value === value) || options[0]
+
+  useEffect(() => {
+    if (!open) return undefined
+
+    const handlePointerDown = (event) => {
+      if (!dropdownRef.current?.contains(event.target)) setOpen(false)
+    }
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  const moveFocus = (event) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const items = [...dropdownRef.current.querySelectorAll('[role="menuitemradio"]')]
+    const currentIndex = items.indexOf(document.activeElement)
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? items.length - 1
+        : currentIndex < 0
+          ? event.key === 'ArrowDown' ? 0 : items.length - 1
+          : (currentIndex + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length
+    items[nextIndex]?.focus()
+  }
+
+  const openWithKeyboard = (event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    event.preventDefault()
+    setOpen(true)
+    requestAnimationFrame(() => {
+      const items = dropdownRef.current?.querySelectorAll('[role="menuitemradio"]')
+      items?.[event.key === 'ArrowDown' ? 0 : items.length - 1]?.focus()
+    })
+  }
+
+  return (
+    <div className={`solace-dropdown ${className}`} ref={dropdownRef}>
+      <button
+        className={`solace-dropdown-trigger ${open ? 'open' : ''}`}
+        type="button"
+        aria-label={ariaLabel}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={openWithKeyboard}
+        ref={triggerRef}
+      >
+        <span>{selectedOption?.label || ''}</span>
+        <ChevronDown size={14} />
+      </button>
+      {open && <div className="solace-dropdown-menu" role="menu" aria-label={menuTitle} onKeyDown={moveFocus}>
+        <p>{menuTitle}</p>
+        <div className="solace-dropdown-options">
+          {options.map((option) => {
+            const selected = option.value === value
+            return <button
+              key={option.value}
+              className={`solace-dropdown-option ${selected ? 'selected' : ''}`}
+              type="button"
+              role="menuitemradio"
+              aria-checked={selected}
+              onClick={() => {
+                onChange(option.value)
+                setOpen(false)
+                triggerRef.current?.focus()
+              }}
+            >
+              <span>{option.label}</span>
+              {selected && <Check size={14} />}
+            </button>
+          })}
+        </div>
+      </div>}
+    </div>
+  )
+}
 
 function getTagTone(tag) {
   const hash = [...tag].reduce((total, character) => total + character.charCodeAt(0), 0)
@@ -154,16 +288,19 @@ export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('solace-theme') || 'light')
   const [entries, setEntries] = useState(loadEntries)
   const [authUser, setAuthUser] = useState(null)
+  const [guestUser, setGuestUser] = useState(loadGuestUser)
+  const [guestUsername, setGuestUsername] = useState('')
   const [authEmail, setAuthEmail] = useState('')
   const [authBusy, setAuthBusy] = useState(false)
   const [authMessage, setAuthMessage] = useState('')
+  const [miraTyping, setMiraTyping] = useState(false)
   const [cloudError, setCloudError] = useState('')
   const [cloudStatus, setCloudStatus] = useState(isSupabaseConfigured ? 'loading' : 'unconfigured')
   const [cloudReadyUserId, setCloudReadyUserId] = useState(null)
   const [cloudRetry, setCloudRetry] = useState(0)
   const [cloudSyncRetry, setCloudSyncRetry] = useState(0)
   const [selectedId, setSelectedId] = useState(() => localStorage.getItem('solace-selected') || 'today')
-  const [view, setView] = useState(loadStartView)
+  const [view, setView] = useState('landing')
   const [settingsTab, setSettingsTab] = useState('account')
   const [startView, setStartView] = useState(loadStartView)
   const [miraVisible, setMiraVisible] = useState(() => localStorage.getItem('solace-mira-visible') !== 'false')
@@ -195,12 +332,15 @@ export default function App() {
   })
   const [profileName, setProfileName] = useState(() => localStorage.getItem('solace-profile') || 'Alex Morgan')
   const [profileSubtitle, setProfileSubtitle] = useState(() => localStorage.getItem('solace-profile-subtitle') || 'Personal journal')
+  const [profileAvatar, setProfileAvatar] = useState(() => localStorage.getItem('solace-profile-avatar') || null)
+  const [companionName, setCompanionName] = useState(() => localStorage.getItem('solace-companion-name') || 'Mira')
   const [tagComposerOpen, setTagComposerOpen] = useState(false)
   const [tagDraft, setTagDraft] = useState('')
   const [recording, setRecording] = useState(false)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const imageInputRef = useRef(null)
+  const avatarInputRef = useRef(null)
   const saveTimerRef = useRef(null)
   const sidebarResizeRef = useRef(null)
   const entriesRef = useRef(entries)
@@ -220,6 +360,7 @@ export default function App() {
   const selectedEntry = entries.find((item) => item.id === selectedId) || entries[0]
   const entry = selectedEntry?.body || ''
   const profileInitials = profileName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+  const isSignedIn = !!(authUser || guestUser)
 
   useEffect(() => {
     localStorage.setItem('solace-theme', theme)
@@ -244,6 +385,15 @@ export default function App() {
   }, [profileSubtitle])
 
   useEffect(() => {
+    if (profileAvatar) localStorage.setItem('solace-profile-avatar', profileAvatar)
+    else localStorage.removeItem('solace-profile-avatar')
+  }, [profileAvatar])
+
+  useEffect(() => {
+    localStorage.setItem('solace-companion-name', companionName)
+  }, [companionName])
+
+  useEffect(() => {
     localStorage.setItem('solace-mira-visible', String(miraVisible))
   }, [miraVisible])
 
@@ -258,6 +408,7 @@ export default function App() {
       const currentRequest = ++requestId
       authUserRef.current = user
       setAuthUser(user)
+      if (user) setView((currentView) => currentView === 'landing' ? loadStartView() : currentView)
       setCloudReadyUserId(null)
       setCloudError('')
       setAuthMessage('')
@@ -431,17 +582,6 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const handleShortcut = (event) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'n') {
-        event.preventDefault()
-        createEntry()
-      }
-    }
-    window.addEventListener('keydown', handleShortcut)
-    return () => window.removeEventListener('keydown', handleShortcut)
-  }, [entries])
-
-  useEffect(() => {
     const closeMenu = (event) => {
       if (!event.target.closest('.solace-entry-status')) setOptionsOpen(false)
     }
@@ -564,7 +704,7 @@ export default function App() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: authEmail.trim(),
-        options: { emailRedirectTo: window.location.origin },
+        options: { emailRedirectTo: new URL(import.meta.env.BASE_URL, window.location.origin).toString() },
       })
       if (error) {
         setCloudError(`Could not send sign-in link: ${error.message}`)
@@ -611,10 +751,31 @@ export default function App() {
     requestAnimationFrame(() => editorRef.current?.focus())
   }
 
+  const createEntryRef = useRef(createEntry)
+  useEffect(() => {
+    createEntryRef.current = createEntry
+  })
+
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'n') {
+        event.preventDefault()
+        createEntryRef.current()
+      }
+    }
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [])
+
   const openToday = () => {
     setView('today')
     setSelectedId(entries.find((item) => item.id === 'today')?.id || entries[0].id)
     setCalendarDate(null)
+  }
+
+  const openJournal = () => {
+    setCalendarDate(null)
+    setView(startView)
   }
 
   const selectEntry = (id) => {
@@ -625,12 +786,12 @@ export default function App() {
   }
 
   const filteredEntries = entries.filter((item) => {
-    if (view === 'favorites' && !item.favorite) return false
     if (calendarDate && getEntryDateKey(item) !== calendarDate) return false
     if (!search.trim()) return true
     const needle = search.toLowerCase()
     return `${item.title} ${item.body} ${item.tags.join(' ')}`.toLowerCase().includes(needle)
   })
+  const favoriteEntries = filteredEntries.filter((item) => item.favorite)
   const matchesArchiveQuery = (item) => {
     if (archiveTag && !item.tags.includes(archiveTag)) return false
     if (!search.trim()) return true
@@ -651,15 +812,55 @@ export default function App() {
 
   const sendMessage = (textValue = message) => {
     const text = textValue.trim()
-    if (!text) return
-    let reply = 'Thank you for sharing that. We can keep it here and return to it gently whenever you are ready.'
-    const lower = text.toLowerCase()
-    if (lower.includes('reflect')) reply = 'What part of today felt easiest to carry, and what part would you rather set down?'
-    if (lower.includes('pattern')) reply = 'We can look for a pattern together. Which feeling or theme keeps returning across your recent entries?'
-    if (/sad|anxious|tired|overwhelmed|stress/.test(lower)) reply = 'That sounds heavy. Stay with what you need right now—one small, kind next step may be enough.'
-    setMessages((current) => [...current, { role: 'user', text }, { role: 'companion', text: reply }])
+    if (!text || miraTyping) return
+    const userMsg = { role: 'user', text }
+    setMessages((current) => [...current, userMsg])
     setShowLatestExchange(true)
     setMessage('')
+    setMiraTyping(true)
+    const currentMessages = [...messages, userMsg]
+    askGemini(companionName, currentMessages, entry, text).then((aiReply) => {
+      let reply = aiReply
+      if (!reply) {
+        const lower = text.toLowerCase()
+        if (lower.includes('reflect')) reply = 'What part of today felt easiest to carry, and what part would you rather set down?'
+        else if (lower.includes('pattern')) reply = 'We can look for a pattern together. Which feeling or theme keeps returning across your recent entries?'
+        else if (/sad|anxious|tired|overwhelmed|stress/.test(lower)) reply = 'That sounds heavy. Stay with what you need right now—one small, kind next step may be enough.'
+        else reply = 'Thank you for sharing that. We can keep it here and return to it gently whenever you are ready.'
+      }
+      setMessages((current) => [...current, { role: 'companion', text: reply }])
+      setMiraTyping(false)
+    }).catch(() => {
+      setMessages((current) => [...current, { role: 'companion', text: 'I\'m here with you. Take your time.' }])
+      setMiraTyping(false)
+    })
+  }
+
+  const signInAsGuest = () => {
+    const username = guestUsername.trim()
+    if (!username) return
+    const user = { username, createdAt: new Date().toISOString() }
+    localStorage.setItem('solace-guest-user', JSON.stringify(user))
+    localStorage.setItem('solace-profile', username)
+    setGuestUser(user)
+    setProfileName(username)
+    setView(startView)
+  }
+
+  const signOutGuest = () => {
+    setGuestUser(null)
+    setGuestUsername('')
+    setView('landing')
+  }
+
+  const deleteGuestAccount = () => {
+    if (!window.confirm('Delete your guest account? This will clear your local journal data permanently.')) return
+    localStorage.clear()
+    setGuestUser(null)
+    setGuestUsername('')
+    setEntries(seedEntries)
+    setMessages(defaultMessages)
+    setView('landing')
   }
 
   const exportJournal = () => {
@@ -678,6 +879,17 @@ export default function App() {
     link.click()
     URL.revokeObjectURL(url)
   }
+
+  const uploadAvatar = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { window.alert('Image must be under 2 MB.'); return }
+    const reader = new FileReader()
+    reader.onload = (e) => setProfileAvatar(e.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  const removeAvatar = () => setProfileAvatar(null)
 
   const resetMiraConversation = () => {
     if (!window.confirm('Reset Mira’s conversation? This only clears the saved chat history.')) return
@@ -890,19 +1102,22 @@ export default function App() {
   const sidebarDateCount = view === 'entries' ? selectedDateCount : filteredEntries.length
   const sidebarHeading = calendarDate
     ? `${selectedDateLabel} · ${sidebarDateCount} ${sidebarDateCount === 1 ? 'entry' : 'entries'}`
-    : view === 'favorites' ? 'Favorites' : view === 'entries' ? 'All entries' : 'Recent entries'
+    : view === 'entries' ? 'All entries' : 'Recent entries'
 
   return (
     <div
-      className={`solace-app ${view === 'settings' ? 'solace-settings-open' : ''} ${resizingSidebar ? 'solace-resizing' : ''}`}
+      className={`solace-app ${view === 'settings' ? 'solace-settings-open' : ''} ${view === 'landing' ? 'solace-login-open' : ''} ${resizingSidebar ? 'solace-resizing' : ''}`}
       data-theme={theme}
       style={{ '--sidebar-width': `${sidebarWidth}px`, '--companion-width': `${companionWidth}px` }}
     >
-      {view !== 'settings' && <>
+      {view !== 'settings' && view !== 'landing' && <>
       <aside className="solace-sidebar" id="journal-sidebar">
         <div className="solace-sidebar-top">
           <div className="solace-brand-row">
-            <a className="solace-brand" href="#today"><span className="solace-brand-icon"><Feather size={15} /></span>Nook</a>
+            <a className="solace-brand" href="#welcome" onClick={(event) => {
+              event.preventDefault()
+              setView('landing')
+            }}><span className="solace-brand-icon"><Feather size={15} /></span>Nook</a>
             <div className="solace-brand-actions">
               <button className="solace-theme-toggle" type="button" aria-label="Toggle dark mode" onClick={toggleTheme}>
                 <span className="solace-theme-thumb"><Sun size={10} /></span>
@@ -949,7 +1164,9 @@ export default function App() {
             ))}
           </div>
           <div className="solace-profile">
-            <span className="solace-avatar">{profileInitials}</span>
+            {profileAvatar
+              ? <img className="solace-avatar solace-avatar-img" src={profileAvatar} alt={profileName} />
+              : <span className="solace-avatar">{profileInitials}</span>}
             <div><p>{profileName}</p><span>{profileSubtitle}</span></div>
             <button aria-label="Open settings" onClick={() => setView('settings')}><MoreHorizontal size={16} /></button>
           </div>
@@ -973,7 +1190,106 @@ export default function App() {
       />
       </>}
 
-      {view === 'settings' ? (
+      {view === 'landing' ? (
+        <main className="solace-login-page">
+          <SplashCursor
+            rainbow={false}
+            colors={splashCursorColors[theme]}
+            colorSpeed={0.6}
+            intensity={4}
+            size={1.2}
+            force={1}
+            swirl={4}
+            trail={2}
+            momentum={1.2}
+            shading={0.5}
+            glow={0.25}
+            quality="medium"
+            clickSplash={false}
+            intro={false}
+            theme={theme}
+            zIndex={0}
+          />
+          <header className="solace-login-topbar">
+            <a className="solace-brand" href="#welcome" aria-label="Nook home">
+              <span className="solace-brand-icon"><Feather size={15} /></span>Nook
+            </a>
+            <div className="solace-login-topbar-actions">
+              <button className="solace-theme-toggle" type="button" aria-label="Toggle dark mode" onClick={toggleTheme}>
+                <span className="solace-theme-thumb"><Sun size={10} /></span>
+              </button>
+            </div>
+          </header>
+
+          <div className="solace-login-content">
+            <section className="solace-login-intro" aria-labelledby="solace-login-title">
+              <p className="solace-login-eyebrow"><span /> A QUIETER KIND OF JOURNAL</p>
+              <h1 id="solace-login-title">A little space to come back to yourself.</h1>
+              <p className="solace-login-description">A quiet place for the ordinary moments and the ones you’re still figuring out.</p>
+              <div className="solace-login-preview" aria-label="A preview of a journal entry">
+                <div className="solace-login-preview-top"><span>AN ENTRY, JUST FOR YOU</span><Bookmark size={15} /></div>
+                <p>“Maybe I don’t need to have it all figured out to begin.”</p>
+                <span className="solace-login-preview-date">A quiet thought, saved for later.</span>
+              </div>
+              <div className="solace-login-benefits">
+                <span><Check size={14} /> Write at your own pace</span>
+                <span><Check size={14} /> Find entries by date, tag, or favorite</span>
+              </div>
+              <p className="solace-login-privacy"><span /> Private by default <i /> No ads <i /> Saved in this browser</p>
+            </section>
+
+            <section className="solace-login-card" aria-labelledby="solace-login-card-title">
+              <p className="solace-login-card-kicker">YOUR JOURNAL IS WAITING</p>
+              <h2 id="solace-login-card-title">{isSignedIn ? 'Welcome back' : 'Welcome to Nook'}</h2>
+              <p className="solace-login-card-copy">{isSignedIn
+                ? `Signed in as ${guestUser?.username || authUser?.email || profileName}. Your journal is ready.`
+                : 'Enter your name to start your personal, private journal.'}</p>
+
+              {isSignedIn ? (
+                <div className="solace-login-unconfigured" role="status">
+                  <strong>You’re signed in.</strong>
+                  <span>Open your journal whenever you’re ready.</span>
+                </div>
+              ) : (
+                <form className="solace-login-form" onSubmit={(e) => { e.preventDefault(); signInAsGuest() }}>
+                  <label htmlFor="solace-guest-username">Your name</label>
+                  <input
+                    id="solace-guest-username"
+                    type="text"
+                    autoComplete="nickname"
+                    required
+                    value={guestUsername}
+                    onChange={(event) => setGuestUsername(event.target.value)}
+                    placeholder="Enter your name"
+                    maxLength={32}
+                  />
+                  <button type="submit" disabled={!guestUsername.trim()}>
+                    Start journaling <ArrowUpRight size={16} />
+                  </button>
+                  <p className="solace-login-form-note">No password, no email. Your journal stays private in this browser.</p>
+                </form>
+              )}
+
+              {authMessage && <p className="solace-login-message" role="status">{authMessage}</p>}
+              {cloudError && <p className="solace-login-error" role="alert">{cloudError}</p>}
+
+              <div className="solace-login-divider"><span>OR</span></div>
+              <button className="solace-login-continue" type="button" onClick={openJournal}>
+                {isSignedIn ? 'Open my journal' : 'Continue as guest'}
+              </button>
+              {isSignedIn && (
+                <button className="solace-login-secondary-action" type="button" onClick={signOutGuest}>
+                  Sign out
+                </button>
+              )}
+              <p className="solace-login-local-note">
+                {isSignedIn ? 'Your journal is saved in this browser.' : 'No email required · Your entries stay in this browser.'}
+              </p>
+            </section>
+          </div>
+          <footer className="solace-login-footer">A small place for the things that make a life.</footer>
+        </main>
+      ) : view === 'settings' ? (
         <main className="solace-settings-page" ref={settingsPageRef}>
           <div className="solace-settings-topbar">
             <a className="solace-brand" href="#today" onClick={(event) => {
@@ -993,7 +1309,7 @@ export default function App() {
               <button aria-current={settingsTab === 'account' ? 'location' : undefined} className={settingsTab === 'account' ? 'active' : ''} onClick={() => accountSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><UserRound size={15} />Account</button>
               <button aria-current={settingsTab === 'appearance' ? 'location' : undefined} className={settingsTab === 'appearance' ? 'active' : ''} onClick={() => appearanceSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Palette size={15} />Appearance</button>
               <button aria-current={settingsTab === 'journal' ? 'location' : undefined} className={settingsTab === 'journal' ? 'active' : ''} onClick={() => journalSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><BookOpen size={15} />Journal</button>
-              <button aria-current={settingsTab === 'mira' ? 'location' : undefined} className={settingsTab === 'mira' ? 'active' : ''} onClick={() => miraSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Sparkles size={15} />Mira</button>
+              <button aria-current={settingsTab === 'mira' ? 'location' : undefined} className={settingsTab === 'mira' ? 'active' : ''} onClick={() => miraSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Sparkles size={15} />{companionName}</button>
               <button aria-current={settingsTab === 'data' ? 'location' : undefined} className={settingsTab === 'data' ? 'active' : ''} onClick={() => dataSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Database size={15} />Data</button>
             </nav>
 
@@ -1054,6 +1370,28 @@ export default function App() {
               </div>
               <div className="solace-settings-row">
                 <div className="solace-settings-row-copy">
+                  <h3>Profile picture</h3>
+                  <p>Add a photo to personalize your journal.</p>
+                </div>
+                <div className="solace-settings-avatar-actions">
+                  {profileAvatar ? (
+                    <img className="solace-avatar solace-avatar-img" src={profileAvatar} alt={profileName} />
+                  ) : (
+                    <span className="solace-avatar">{profileInitials}</span>
+                  )}
+                  <input ref={avatarInputRef} type="file" accept="image/*" onChange={uploadAvatar} hidden />
+                  <button className="solace-settings-action" type="button" onClick={() => avatarInputRef.current?.click()}>
+                    {profileAvatar ? 'Change photo' : 'Upload photo'}
+                  </button>
+                  {profileAvatar && (
+                    <button className="solace-settings-action solace-settings-action-danger" type="button" onClick={removeAvatar}>
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="solace-settings-row">
+                <div className="solace-settings-row-copy">
                   <h3>Profile name</h3>
                   <p>This name appears on your journal profile.</p>
                 </div>
@@ -1104,29 +1442,50 @@ export default function App() {
                   <h3>Starting page</h3>
                   <p>Choose the journal view shown when you open Nook.</p>
                 </div>
-                <label className="solace-settings-select">
-                  <span className="solace-visually-hidden">Starting page</span>
-                  <select value={startView} onChange={(event) => {
-                    setStartView(event.target.value)
-                    localStorage.setItem('solace-start-view', event.target.value)
-                  }}>
-                    <option value="today">Today</option>
-                    <option value="entries">All entries</option>
-                    <option value="favorites">Favorites</option>
-                  </select>
-                </label>
+                <div className="solace-settings-select">
+                  <NookDropdown
+                    ariaLabel="Starting page"
+                    menuTitle="STARTING PAGE"
+                    value={startView}
+                    options={[
+                      { value: 'today', label: 'Today' },
+                      { value: 'entries', label: 'All entries' },
+                      { value: 'favorites', label: 'Favorites' },
+                    ]}
+                    onChange={(nextView) => {
+                      setStartView(nextView)
+                      localStorage.setItem('solace-start-view', nextView)
+                    }}
+                  />
+                </div>
               </div>
             </section>
 
             <section id="settings-mira" ref={miraSettingsRef} className="solace-settings-card" aria-labelledby="settings-mira-heading">
               <header className="solace-settings-card-header">
-                <h2 id="settings-mira-heading">Mira</h2>
-                <p>Manage your saved conversation with your reflection companion.</p>
+                <h2 id="settings-mira-heading">{companionName}</h2>
+                <p>Personalize your reflection companion and manage conversation history.</p>
               </header>
               <div className="solace-settings-row">
                 <div className="solace-settings-row-copy">
+                  <h3>Companion name</h3>
+                  <p>Customize the name of your reflection companion.</p>
+                </div>
+                <label className="solace-settings-field">
+                  <span className="solace-visually-hidden">Companion name</span>
+                  <input
+                    aria-label="Companion name"
+                    value={companionName}
+                    onChange={(event) => setCompanionName(event.target.value.trim() || 'Mira')}
+                    placeholder="e.g. Mira"
+                    maxLength={24}
+                  />
+                </label>
+              </div>
+              <div className="solace-settings-row">
+                <div className="solace-settings-row-copy">
                   <h3>Companion panel</h3>
-                  <p>Show Mira beside your journal while you write.</p>
+                  <p>Show {companionName} beside your journal while you write.</p>
                 </div>
                 <button
                   className={`solace-visibility-toggle ${miraVisible ? 'enabled' : ''}`}
@@ -1142,7 +1501,7 @@ export default function App() {
               <div className="solace-settings-row">
                 <div className="solace-settings-row-copy">
                   <h3>Conversation history</h3>
-                  <p>Clear the saved chat and start again with Mira’s welcome prompts.</p>
+                  <p>Clear the saved chat and start again with {companionName}’s welcome prompts.</p>
                 </div>
                 <button className="solace-settings-action" onClick={resetMiraConversation}>Reset conversation</button>
               </div>
@@ -1151,16 +1510,62 @@ export default function App() {
             <section id="settings-data" ref={dataSettingsRef} className="solace-settings-card" aria-labelledby="settings-data-heading">
               <header className="solace-settings-card-header">
                 <h2 id="settings-data-heading">Data &amp; privacy</h2>
-                <p>Your journal is stored in this browser. Export a copy to keep a backup.</p>
+                <p>Your journal is stored in this browser. Export a copy or manage your account.</p>
               </header>
               <div className="solace-settings-row">
                 <div className="solace-settings-row-copy">
                   <h3>Export journal</h3>
-                  <p>Download your entries and saved Mira conversation as a JSON file.</p>
+                  <p>Download your entries and saved {companionName} conversation as a JSON file.</p>
                 </div>
                 <button className="solace-settings-action" onClick={exportJournal}><Download size={14} />Export data</button>
               </div>
+              <div className="solace-settings-row">
+                <div className="solace-settings-row-copy">
+                  <h3>Sign out</h3>
+                  <p>Sign out of your current journal session on this device.</p>
+                </div>
+                <button className="solace-settings-action" type="button" onClick={signOutGuest}>Sign out</button>
+              </div>
+              <div className="solace-settings-row">
+                <div className="solace-settings-row-copy">
+                  <h3 style={{ color: '#c0392b' }}>Delete account</h3>
+                  <p>Permanently remove your profile, entries, and conversation history from this browser.</p>
+                </div>
+                <button className="solace-settings-action solace-settings-action-danger" type="button" onClick={deleteGuestAccount}>Delete account</button>
+              </div>
             </section>
+          </div>
+        </main>
+      ) : view === 'favorites' ? (
+        <main className="solace-archive">
+          <div className="solace-archive-inner">
+            <header className="solace-archive-heading">
+              <p className="solace-date">YOUR JOURNAL</p>
+              <h1>Favorites</h1>
+              <p>Your saved entries, all in one place.</p>
+            </header>
+            {favoriteEntries.length > 0 ? (
+              <div className="solace-favorites-list">
+                {favoriteEntries.map((item) => (
+                  <button className="solace-archive-entry" key={item.id} type="button" onClick={() => selectEntry(item.id)}>
+                    <span className="solace-archive-entry-copy">
+                      <strong>{item.title || 'Untitled entry'}</strong>
+                      <span>{item.date}</span>
+                    </span>
+                    <ArrowUpRight size={15} />
+                  </button>
+                ))}
+              </div>
+            ) : entries.some((item) => item.favorite) ? (
+              <p className="solace-archive-empty">No favorites match your search.</p>
+            ) : (
+              <section className="solace-favorites-empty" aria-labelledby="solace-favorites-empty-heading">
+                <Bookmark size={20} aria-hidden="true" />
+                <h2 id="solace-favorites-empty-heading">No favorites yet</h2>
+                <p>Open an entry and choose “Add to favorites” from its options menu to save it here.</p>
+                <button type="button" onClick={openToday}>Back to journal</button>
+              </section>
+            )}
           </div>
         </main>
       ) : view === 'entries' ? (
@@ -1239,13 +1644,20 @@ export default function App() {
                   </div>}
                 </div>
               </div>
-              <label className="solace-archive-tag-filter">
+              <div className="solace-archive-tag-filter">
                 <span>Filter by tag</span>
-                <select aria-label="Filter entries by tag" value={archiveTag} onChange={(event) => setArchiveTag(event.target.value)}>
-                  <option value="">All tags</option>
-                  {archiveTags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
-                </select>
-              </label>
+                <NookDropdown
+                  className="solace-archive-tag-dropdown"
+                  ariaLabel="Filter entries by tag"
+                  menuTitle="FILTER BY TAG"
+                  value={archiveTag}
+                  options={[
+                    { value: '', label: 'All tags' },
+                    ...archiveTags.map((tag) => ({ value: tag, label: tag })),
+                  ]}
+                  onChange={setArchiveTag}
+                />
+              </div>
               <div className="solace-archive-view-toggle" role="group" aria-label="Archive view">
                 <button className={archiveMode === 'list' ? 'active' : ''} type="button" aria-pressed={archiveMode === 'list'} onClick={() => setArchiveMode('list')}><List size={15} />List</button>
                 <button className={archiveMode === 'calendar' ? 'active' : ''} type="button" aria-pressed={archiveMode === 'calendar'} onClick={() => setArchiveMode('calendar')}><CalendarDays size={15} />Calendar</button>
@@ -1381,11 +1793,11 @@ export default function App() {
       </main>
       )}
 
-      {view !== 'settings' && view !== 'entries' && miraVisible && <>
+      {view !== 'settings' && view !== 'landing' && view !== 'entries' && view !== 'favorites' && miraVisible && <>
       <div
         className="solace-resizer"
         role="separator"
-        aria-label="Resize Mira panel"
+        aria-label={`Resize ${companionName} panel`}
         aria-controls="mira-panel"
         aria-orientation="vertical"
         aria-valuemin={260}
@@ -1400,10 +1812,10 @@ export default function App() {
       />
       <aside className="solace-companion" id="mira-panel">
         <header>
-          <div><p>Your companion</p><h2>Mira</h2></div>
+          <div><p>Your companion</p><h2>{companionName}</h2></div>
           <div className="solace-companion-actions">
             <div className="solace-presence"><i /><span>Here with you</span></div>
-            <button className="solace-hide-mira" type="button" aria-label="Hide Mira panel" title="Hide Mira panel" onClick={() => setMiraVisible(false)}><EyeOff size={15} /></button>
+            <button className="solace-hide-mira" type="button" aria-label={`Hide ${companionName} panel`} title={`Hide ${companionName} panel`} onClick={() => setMiraVisible(false)}><EyeOff size={15} /></button>
           </div>
         </header>
         <div className="solace-chat">
@@ -1413,6 +1825,12 @@ export default function App() {
               <div>{item.text}</div>
             </div>
           ))}
+          {miraTyping && (
+            <div className="solace-message companion">
+              <div className="solace-mira-icon"><Sparkles size={13} /></div>
+              <div className="solace-mira-typing"><span /><span /><span /></div>
+            </div>
+          )}
           {messages.length > 1 && (
             <button className="solace-conversation-toggle" onClick={() => setConversationExpanded((expanded) => !expanded)}>
               {conversationExpanded ? 'Show latest reflection' : `Show conversation · ${messages.length} messages`}
@@ -1421,23 +1839,23 @@ export default function App() {
         </div>
         <div className="solace-chat-compose">
           <div className="solace-input-row">
-            <input aria-label="Message Mira" value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && sendMessage()} placeholder="Talk to Mira..." />
-            <button aria-label="Send message" onClick={() => sendMessage()}><ArrowUp size={15} /></button>
+            <input aria-label={`Message ${companionName}`} value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && !miraTyping && sendMessage()} placeholder={`Talk to ${companionName}...`} disabled={miraTyping} />
+            <button aria-label="Send message" onClick={() => sendMessage()} disabled={miraTyping}><ArrowUp size={15} /></button>
           </div>
           <details className="solace-suggestions" ref={reflectionIdeasRef}>
             <summary><Sparkles size={13} />Reflection ideas</summary>
             <div>
-              <button onClick={() => {
+              <button disabled={miraTyping} onClick={() => {
                 sendMessage('Help me reflect')
                 reflectionIdeasRef.current.open = false
               }}>Help me reflect</button>
-              <button onClick={() => {
+              <button disabled={miraTyping} onClick={() => {
                 sendMessage('Find a pattern')
                 reflectionIdeasRef.current.open = false
               }}>Find a pattern</button>
             </div>
           </details>
-          <p>Mira is here to support your reflection.</p>
+          <p>{companionName} is here to support your reflection.</p>
         </div>
       </aside>
       </>}

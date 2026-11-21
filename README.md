@@ -1,6 +1,16 @@
 # Nook
 
-Nook is a private-feeling digital journal for daily reflections. It includes a focused writing space, a date-based archive, tags, favorites, light and dark themes, and an optional email-link account for syncing journal entries with Supabase.
+Nook is a private, mindful digital journaling space for daily reflection. It features a focused writing environment, a date-based calendar and archive, tagging, favorites, light and dark themes, an emotionally perceptive AI reflection companion powered by Google Gemini, and optional cloud sync via Supabase.
+
+## Features
+
+- **Guest Sign-In**: Start journaling instantly with just your name—no passwords or mandatory emails. All entries stay stored privately in your browser.
+- **AI Reflection Companion**: A warm, mindful AI companion (default: Mira) that reads your journal entry for context, understands your mood, and prompts gentle self-reflection.
+- **Customizable Assistant**: Rename your AI companion in Settings (e.g., to Mira, Sol, Aria, etc.).
+- **Profile Photo & Avatar**: Upload custom profile photos or avatars directly in Settings.
+- **Sign Out & Account Deletion**: Easily sign out of your guest session or completely purge all local journal data with one click.
+- **Optional Cloud Sync**: Connect Supabase with secure email magic links to sync your entries across devices.
+- **Rich Media**: Attach photos and audio voice recordings directly into your journal entries.
 
 ## Repository layout
 
@@ -20,7 +30,7 @@ nook/
 └── README.md
 ```
 
-The backend is hosted by Supabase; this repository does not run a separate API server. Database schema and row-level security migrations live under `backend/supabase`.
+Database schema and row-level security migrations live under `backend/supabase`.
 
 ## Quick start
 
@@ -32,7 +42,7 @@ npm ci
 npm run dev
 ```
 
-Vite prints the local URL when the development server is ready. From `frontend/`, use:
+From `frontend/`, you can also run:
 
 ```sh
 npm run build
@@ -40,24 +50,33 @@ npm run lint
 npm run preview
 ```
 
-## Supabase setup
+## Environment variables
 
-Cloud sync is optional. Without Supabase configuration, entries continue to work in browser storage.
+Create `frontend/.env.local` based on `frontend/.env.example`:
+
+```dotenv
+# Optional: Supabase cloud sync
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-public-anon-key
+
+# Optional: Google Gemini API key for AI companion
+VITE_GEMINI_API_KEY=your-gemini-api-key
+```
+
+## Live site & deployment
+
+The `main` branch deploys the frontend to GitHub Pages at <https://breadoldest-collab.github.io/nook/>.
+
+To configure production keys on GitHub Pages:
+1. Navigate to your repository **Settings → Secrets and variables → Actions**.
+2. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository variables.
+3. Add `VITE_GEMINI_API_KEY` as a repository secret or variable.
+
+## Supabase setup (optional)
+
+Cloud sync is entirely optional; browser-local storage works out of the box.
 
 1. Create a Supabase project.
 2. Run [`backend/supabase/migrations/20261120000000_create_journal_entries.sql`](./backend/supabase/migrations/20261120000000_create_journal_entries.sql) in the Supabase SQL Editor.
-3. In **Authentication → URL Configuration**, allow the local Vite origin (usually `http://localhost:5173`) and the deployed Nook origin.
-4. Copy `frontend/.env.example` to `frontend/.env.local` and add the project URL and public anon/publishable key:
-
-   ```dotenv
-   VITE_SUPABASE_URL=https://your-project.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-public-anon-key
-   ```
-
-5. Restart Vite, open **Settings → Account → Cloud sync**, enter your email, and follow the sign-in link.
-
-Never put a Supabase `service_role` or secret key in this frontend app. Environment files containing keys are ignored by Git.
-
-The first sign-in imports browser entries into the account and keeps their local copy. Entries are scoped by user with row-level security. Later entry changes sync when online; the app reports sync errors and retains unsynced local data. Profile preferences and Mira conversation history remain browser-local. Photo attachments sync with their entry, subject to a 4 MB request limit; voice recordings currently use temporary browser URLs and are not portable across devices.
-
-See [`backend/README.md`](./backend/README.md) for backend ownership and migration conventions.
+3. In **Authentication → URL Configuration**, allow your local Vite origin (`http://localhost:5173`) and your deployed GitHub Pages URL (`https://breadoldest-collab.github.io/nook/`).
+4. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `frontend/.env.local`.
