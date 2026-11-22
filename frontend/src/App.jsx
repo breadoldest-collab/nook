@@ -57,25 +57,34 @@ async function askGemini(companionName, conversationHistory, currentEntryBody, u
   const activeKey = customKey || (typeof window !== "undefined" ? localStorage.getItem("solace-gemini-key") : null) || GEMINI_API_KEY
   if (!activeKey) return null
   const entryContext = currentEntryBody?.trim()
-    ? `The user is currently writing a journal entry:\n"""\n${currentEntryBody.slice(0, 1200)}\n"""\n\n`
+    ? `The user is currently writing this journal entry:\n"""\n${currentEntryBody.slice(0, 1500)}\n"""\n\n`
     : ''
   const recentHistory = conversationHistory.slice(-10).map((m) =>
     `${m.role === 'user' ? 'User' : companionName}: ${m.text}`
   ).join('\n')
-  const systemPrompt = `You are ${companionName}, a warm, emotionally intelligent journaling companion embedded in a private journaling app called Nook. Your role is to gently support the user's self-reflection. Keep replies short (1-3 sentences), warm, non-judgmental, and grounded. Never give clinical advice. Use the user's journal context to personalize your responses. Never repeat back the same phrase twice in a row.\n\n${entryContext}Recent conversation:\n${recentHistory}`
+  const systemPrompt = `You are ${companionName}, a warm, emotionally perceptive, mindful journaling companion embedded in Nook. Your role is to gently support the user's self-reflection with kindness and empathy. Keep replies short (1-2 sentences), warm, and grounded. Never give clinical advice. Understand what they wrote in their journal entry and refer to it naturally when appropriate.\n\n${entryContext}Recent conversation:\n${recentHistory}`
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${GEMINI_MODEL}:generateContent?key=${activeKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-      generationConfig: { maxOutputTokens: 180, temperature: 0.85 },
-    }),
-  })
-  if (!res.ok) return null
-  const data = await res.json()
-  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 6000)
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${GEMINI_MODEL}:generateContent?key=${activeKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+        generationConfig: { maxOutputTokens: 140, temperature: 0.7 },
+      }),
+    })
+    clearTimeout(timeoutId)
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null
+  } catch {
+    clearTimeout(timeoutId)
+    return null
+  }
 }
 
 function loadGuestUser() {
@@ -330,8 +339,6 @@ export default function App() {
   const [optionsOpen, setOptionsOpen] = useState(false)
   const [saved, setSaved] = useState(true)
   const [message, setMessage] = useState('')
-  const [conversationExpanded, setConversationExpanded] = useState(false)
-  const [showLatestExchange, setShowLatestExchange] = useState(false)
   const [messages, setMessages] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('solace-messages'))
@@ -360,11 +367,17 @@ export default function App() {
   const editorRef = useRef(null)
   const reflectionIdeasRef = useRef(null)
   const settingsPageRef = useRef(null)
+  const chatScrollRef = useRef(null)
   const accountSettingsRef = useRef(null)
   const appearanceSettingsRef = useRef(null)
   const journalSettingsRef = useRef(null)
   const miraSettingsRef = useRef(null)
   const dataSettingsRef = useRef(null)
+
+  
+  useEffect(() => {
+    chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: 'smooth' })
+  }, [messages, miraTyping])
 
   const selectedEntry = entries.find((item) => item.id === selectedId) || entries[0]
   const entry = selectedEntry?.body || ''
@@ -819,16 +832,16 @@ export default function App() {
     return rightDate.localeCompare(leftDate) || right.date.localeCompare(left.date)
   })
 
-  const sendMessage = (textValue = message) => {
+  const sendMessage = async (textValue = message) => {
     const text = textValue.trim()
     if (!text || miraTyping) return
     const userMsg = { role: 'user', text }
     setMessages((current) => [...current, userMsg])
-    setShowLatestExchange(true)
     setMessage('')
     setMiraTyping(true)
     const currentMessages = [...messages, userMsg]
-    askGemini(companionName, currentMessages, entry, text, geminiApiKey).then((aiReply) => {
+    try {
+      const aiReply = await askGemini(companionName, currentMessages, entry, text, geminiApiKey)
       let reply = aiReply
       if (!reply) {
         const lower = text.toLowerCase()
@@ -838,11 +851,11 @@ export default function App() {
         else reply = 'Thank you for sharing that. We can keep it here and return to it gently whenever you are ready.'
       }
       setMessages((current) => [...current, { role: 'companion', text: reply }])
+    } catch {
+      setMessages((current) => [...current, { role: 'companion', text: "I'm here with you. Take your time." }])
+    } finally {
       setMiraTyping(false)
-    }).catch(() => {
-      setMessages((current) => [...current, { role: 'companion', text: 'I\'m here with you. Take your time.' }])
-      setMiraTyping(false)
-    })
+    }
   }
 
   const signInAsGuest = () => {
@@ -903,8 +916,6 @@ export default function App() {
   const resetMiraConversation = () => {
     if (!window.confirm('Reset Mira’s conversation? This only clears the saved chat history.')) return
     setMessages(defaultMessages)
-    setConversationExpanded(false)
-    setShowLatestExchange(false)
   }
 
   const finishEntry = () => {
@@ -998,14 +1009,7 @@ export default function App() {
   const titleValue = selectedEntry?.title === 'Untitled reflection' && !entry.trim()
     ? ''
     : selectedEntry?.title || ''
-  const latestCompanion = messages.slice().reverse().find((item) => item.role === 'companion')
-  const latestCompanionIndex = latestCompanion ? messages.lastIndexOf(latestCompanion) : -1
-  const latestUser = messages.slice(0, latestCompanionIndex).reverse().find((item) => item.role === 'user')
-  const visibleMessages = conversationExpanded
-    ? messages
-    : showLatestExchange && latestUser && latestCompanion
-      ? [latestUser, latestCompanion]
-      : latestCompanion ? [latestCompanion] : []
+  const visibleMessages = messages
 
   const startSidebarResize = (side, event) => {
     if (event.button !== 0) return
@@ -1848,7 +1852,7 @@ export default function App() {
             <button className="solace-hide-mira" type="button" aria-label={`Hide ${companionName} panel`} title={`Hide ${companionName} panel`} onClick={() => setMiraVisible(false)}><EyeOff size={15} /></button>
           </div>
         </header>
-        <div className="solace-chat">
+        <div className="solace-chat" ref={chatScrollRef}>
           {visibleMessages.map((item, index) => (
             <div key={index} className={`solace-message ${item.role}`}>
               {item.role === 'companion' && <div className="solace-mira-icon"><Sparkles size={13} /></div>}
@@ -1861,11 +1865,7 @@ export default function App() {
               <div className="solace-mira-typing"><span /><span /><span /></div>
             </div>
           )}
-          {messages.length > 1 && (
-            <button className="solace-conversation-toggle" onClick={() => setConversationExpanded((expanded) => !expanded)}>
-              {conversationExpanded ? 'Show recent reflections' : `Show earlier reflections · ${messages.length} messages`}
-            </button>
-          )}
+          
         </div>
         <div className="solace-chat-compose">
           <div className="solace-input-row">
