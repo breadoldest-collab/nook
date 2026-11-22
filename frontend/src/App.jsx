@@ -23,6 +23,8 @@ import {
   Search,
   Settings2,
   Sparkles,
+  Tag,
+  Pencil,
   Square,
   Sun,
   Trash2,
@@ -437,8 +439,49 @@ export default function App() {
     setMiraTyping(false)
   }
 
-  const [tagComposerOpen, setTagComposerOpen] = useState(false)
-  const [tagDraft, setTagDraft] = useState('')
+    const [tagDraft, setTagDraft] = useState('')
+  const [tagPickerOpen, setTagPickerOpen] = useState(false)
+  const [editingTag, setEditingTag] = useState(null)
+  const [editingTagValue, setEditingTagValue] = useState('')
+  const [newGlobalTag, setNewGlobalTag] = useState('')
+  const tagPickerRef = useRef(null)
+
+  const allTags = [...new Set(entries.flatMap((item) => item.tags))].filter(Boolean).sort()
+
+  const renameTag = (oldTag, newTag) => {
+    const trimmed = newTag.trim().toLowerCase()
+    if (!trimmed || trimmed === oldTag) {
+      setEditingTag(null)
+      return
+    }
+    const nextEntries = entries.map((item) => {
+      if (!item.tags.includes(oldTag)) return item
+      const updatedTags = item.tags.map((t) => (t === oldTag ? trimmed : t))
+      return { ...item, tags: [...new Set(updatedTags)] }
+    })
+    persistEntries(nextEntries)
+    setEditingTag(null)
+  }
+
+  const deleteTag = (tagToDelete) => {
+    if (!window.confirm(`Delete tag "${tagToDelete}" from all entries?`)) return
+    const nextEntries = entries.map((item) => {
+      if (!item.tags.includes(tagToDelete)) return item
+      return { ...item, tags: item.tags.filter((t) => t !== tagToDelete) }
+    })
+    persistEntries(nextEntries)
+  }
+
+  const toggleTagOnEntry = (tag) => {
+    if (!selectedEntry) return
+    const trimmed = tag.trim().toLowerCase()
+    if (!trimmed) return
+    const exists = selectedEntry.tags.includes(trimmed)
+    const nextTags = exists
+      ? selectedEntry.tags.filter((t) => t !== trimmed)
+      : [...selectedEntry.tags, trimmed]
+    updateEntry({ tags: nextTags })
+  }
   const [recording, setRecording] = useState(false)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
@@ -919,6 +962,17 @@ export default function App() {
     }
   }, [imageContextMenu])
 
+  useEffect(() => {
+    if (!tagPickerOpen) return
+    const handleClickOutside = (e) => {
+      if (tagPickerRef.current && !tagPickerRef.current.contains(e.target)) {
+        setTagPickerOpen(false)
+      }
+    }
+    document.addEventListener('pointerdown', handleClickOutside)
+    return () => document.removeEventListener('pointerdown', handleClickOutside)
+  }, [tagPickerOpen])
+
   const filteredEntries = entries.filter((item) => {
     if (calendarDate && getEntryDateKey(item) !== calendarDate) return false
     if (!search.trim()) return true
@@ -1247,7 +1301,7 @@ export default function App() {
       data-theme={theme}
       style={{ '--sidebar-width': `${sidebarWidth}px`, '--companion-width': `${companionWidth}px` }}
     >
-      {view !== 'settings' && view !== 'landing' && <>
+      {view !== 'settings' && view !== 'tags' && view !== 'landing' && <>
       <aside className="solace-sidebar" id="journal-sidebar">
         <div className="solace-sidebar-top">
           <div className="solace-brand-row">
@@ -1271,6 +1325,7 @@ export default function App() {
             <button className={view === 'today' ? 'active' : ''} onClick={openToday}><Sun size={15} />Today</button>
             <button className={view === 'entries' ? 'active' : ''} onClick={() => { setCalendarDate(null); setView('entries') }}><BookOpen size={15} />All entries</button>
             <button className={view === 'favorites' ? 'active' : ''} onClick={() => { setCalendarDate(null); setView('favorites') }}><Bookmark size={15} />Favorites</button>
+            <button className={view === 'tags' ? 'active' : ''} onClick={() => { setCalendarDate(null); setView('tags') }}><Tag size={15} />Tags</button>
             <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}><Settings2 size={15} />Settings</button>
           </nav>
 
@@ -1295,7 +1350,10 @@ export default function App() {
         </div>
 
         <div className="solace-sidebar-bottom">
-          <div className="solace-section-heading"><h2>Tags</h2><button aria-label="Add tag" onClick={addTag}><Plus size={15} /></button></div>
+          <div className="solace-section-heading">
+            <h2 onClick={() => setView('tags')} style={{ cursor: 'pointer' }} title="Manage tags">Tags</h2>
+            <button aria-label="Manage tags" title="Manage tags" onClick={() => setView('tags')}><Plus size={15} /></button>
+          </div>
           <div className="solace-tags">
             {[...new Set(entries.flatMap((item) => item.tags))].map((tag) => (
               <button key={tag} className={`tag-tone-${getTagTone(tag)}`} onClick={() => { setSearch(tag); setSearchOpen(true) }}>{tag}</button>
@@ -1426,6 +1484,119 @@ export default function App() {
             </section>
           </div>
           <footer className="solace-login-footer">A small place for the things that make a life.</footer>
+        </main>
+      ) : view === 'tags' ? (
+        <main className="solace-tags-page">
+          <div className="solace-settings-topbar">
+            <a className="solace-brand" href="#today" onClick={(event) => {
+              event.preventDefault()
+              setView('today')
+            }}><NookBrandIcon />Nook</a>
+            <button className="solace-settings-back" onClick={() => setView('today')}><ArrowLeft size={15} />Back to journal</button>
+          </div>
+          <div className="solace-tags-inner">
+            <header className="solace-tags-header">
+              <p className="solace-date"><Tag size={16} /> TAGS</p>
+              <h1>Manage Tags</h1>
+              <p>Organize, rename, or delete tags across all your journal reflections.</p>
+            </header>
+
+            <form
+              className="solace-tags-create-bar"
+              onSubmit={(e) => {
+                e.preventDefault()
+                const val = newGlobalTag.trim().toLowerCase()
+                if (val && !allTags.includes(val)) {
+                  if (selectedEntry) {
+                    toggleTagOnEntry(val)
+                  }
+                  setNewGlobalTag('')
+                }
+              }}
+            >
+              <input
+                type="text"
+                value={newGlobalTag}
+                onChange={(e) => setNewGlobalTag(e.target.value)}
+                placeholder="Create a new tag..."
+              />
+              <button type="submit" disabled={!newGlobalTag.trim()}>
+                <Plus size={14} /> Create tag
+              </button>
+            </form>
+
+            <div className="solace-tags-grid">
+              {allTags.map((tag) => {
+                const count = entries.filter((item) => item.tags.includes(tag)).length
+                const isEditing = editingTag === tag
+                return (
+                  <div className="solace-tag-card" key={tag}>
+                    <div className="solace-tag-card-top">
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editingTagValue}
+                          onChange={(e) => setEditingTagValue(e.target.value)}
+                          className="solace-tag-edit-input"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') renameTag(tag, editingTagValue)
+                            if (e.key === 'Escape') setEditingTag(null)
+                          }}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className={`tag-tone-${getTagTone(tag)}`}
+                          onClick={() => {
+                            setArchiveTag(tag)
+                            setView('entries')
+                          }}
+                          title="View entries with this tag"
+                        >
+                          {tag}
+                        </button>
+                      )}
+                      <span className="solace-tag-card-count">{count} {count === 1 ? 'entry' : 'entries'}</span>
+                    </div>
+
+                    <div className="solace-tag-card-actions">
+                      {isEditing ? (
+                        <>
+                          <button type="button" onClick={() => renameTag(tag, editingTagValue)}><Check size={12} /> Save</button>
+                          <button type="button" onClick={() => setEditingTag(null)}><X size={12} /> Cancel</button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingTag(tag)
+                              setEditingTagValue(tag)
+                            }}
+                            title="Rename tag"
+                          >
+                            <Pencil size={12} /> Rename
+                          </button>
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() => deleteTag(tag)}
+                            title="Delete tag"
+                          >
+                            <Trash2 size={12} /> Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              {allTags.length === 0 && (
+                <p className="solace-empty">No tags found. Create your first tag above!</p>
+              )}
+            </div>
+          </div>
         </main>
       ) : view === 'settings' ? (
         <main className="solace-settings-page" ref={settingsPageRef}>
@@ -1939,23 +2110,85 @@ export default function App() {
             </div>
           </header>
 
-          <div className="solace-entry-tags">
+          <div className="solace-entry-tags" ref={tagPickerRef}>
             {selectedEntry?.tags.map((tag) => (
-              <button key={tag} className={`tag-tone-${getTagTone(tag)}`} aria-label={`Remove ${tag} tag`} onClick={() => updateEntry({ tags: selectedEntry.tags.filter((item) => item !== tag) })}>{tag}</button>
+              <button
+                key={tag}
+                type="button"
+                className={`tag-tone-${getTagTone(tag)}`}
+                aria-label={`Remove ${tag} tag`}
+                title="Click to remove tag"
+                onClick={() => toggleTagOnEntry(tag)}
+              >
+                <span>{tag}</span>
+                <X size={11} />
+              </button>
             ))}
+            <button
+              type="button"
+              className="solace-add-tag-trigger"
+              onClick={() => setTagPickerOpen((open) => !open)}
+              aria-label="Add tags"
+              title="Add tags"
+            >
+              <Plus size={13} />
+              <span>Add tag</span>
+            </button>
+
+            {tagPickerOpen && (
+              <div className="solace-tag-picker-popover">
+                <div className="solace-tag-picker-header">
+                  <span>Tags</span>
+                  <button type="button" onClick={() => setTagPickerOpen(false)} aria-label="Close tag picker">
+                    <X size={13} />
+                  </button>
+                </div>
+
+                <div className="solace-tag-picker-list">
+                  {allTags.map((tag) => {
+                    const isAttached = selectedEntry?.tags.includes(tag)
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`solace-tag-picker-item tag-tone-${getTagTone(tag)} ${isAttached ? 'selected' : ''}`}
+                        onClick={() => toggleTagOnEntry(tag)}
+                      >
+                        <span>{tag}</span>
+                        {isAttached ? <Check size={12} /> : <Plus size={12} />}
+                      </button>
+                    )
+                  })}
+                  {allTags.length === 0 && (
+                    <p className="solace-tag-picker-empty">No tags yet. Create one below!</p>
+                  )}
+                </div>
+
+                <form
+                  className="solace-tag-picker-create"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const val = tagDraft.trim().toLowerCase()
+                    if (val) {
+                      toggleTagOnEntry(val)
+                      setTagDraft('')
+                    }
+                  }}
+                >
+                  <input
+                    type="text"
+                    value={tagDraft}
+                    onChange={(e) => setTagDraft(e.target.value)}
+                    placeholder="New tag..."
+                    autoFocus
+                  />
+                  <button type="submit" aria-label="Add tag" disabled={!tagDraft.trim()}>
+                    <Plus size={14} />
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
-          {tagComposerOpen && (
-            <form className="solace-inline-form solace-entry-tag-form" onSubmit={(event) => {
-              event.preventDefault()
-              const value = tagDraft.trim().toLowerCase()
-              if (value && !selectedEntry.tags.includes(value)) updateEntry({ tags: [...selectedEntry.tags, value] })
-              setTagComposerOpen(false)
-              setTagDraft('')
-            }}>
-              <input aria-label="Tag name" value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} placeholder="Tag name" autoFocus />
-              <button type="submit" aria-label="Save tag"><Plus size={13} /></button>
-            </form>
-          )}
 
           <textarea ref={editorRef} aria-label="Diary entry" value={entry} onChange={(event) => {
             const body = event.target.value
@@ -2056,8 +2289,15 @@ export default function App() {
         <div className="solace-chat" ref={chatScrollRef}>
           {visibleMessages.map((item, index) => (
             <div key={index} className={`solace-message ${item.role}`}>
-              {item.role === 'companion' && <div className="solace-mira-icon"><Sparkles size={13} /></div>}
-              <div>{item.text}</div>
+              {item.role === 'companion' && (
+                <div className="solace-mira-icon">
+                  <Sparkles size={14} />
+                </div>
+              )}
+              <div className="solace-message-body">
+                <div className="solace-message-bubble">
+                  {item.text}
+                </div>
                 {item.role === 'companion' && (
                   <button
                     type="button"
@@ -2068,15 +2308,21 @@ export default function App() {
                     }}
                     title="Insert this into your journal entry"
                   >
-                    + Add to entry
+                    <Plus size={12} />
+                    <span>Add to entry</span>
                   </button>
                 )}
+              </div>
             </div>
           ))}
           {miraTyping && (
             <div className="solace-message companion">
-              <div className="solace-mira-icon"><Sparkles size={13} /></div>
-              <div className="solace-mira-typing"><span /><span /><span /></div>
+              <div className="solace-mira-icon"><Sparkles size={14} /></div>
+              <div className="solace-message-body">
+                <div className="solace-message-bubble solace-mira-typing">
+                  <span /><span /><span />
+                </div>
+              </div>
             </div>
           )}
           
