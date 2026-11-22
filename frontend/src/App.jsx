@@ -358,13 +358,29 @@ function loadStartView() {
 
 function loadEntries() {
   try {
+    const purged = typeof window !== 'undefined' ? localStorage.getItem('solace-clean-slate-v3') : null
+    if (!purged && typeof window !== 'undefined') {
+      localStorage.setItem('solace-clean-slate-v3', 'true')
+      localStorage.removeItem('solace-entries')
+      localStorage.removeItem('solace-messages')
+      localStorage.removeItem('solace-liked-days')
+      localStorage.removeItem('solace-tag-colors')
+      if (localStorage.getItem('solace-profile') === 'Alex Morgan') {
+        localStorage.removeItem('solace-profile')
+      }
+      return seedEntries
+    }
     const saved = JSON.parse(localStorage.getItem('solace-entries'))
     if (Array.isArray(saved) && saved.length) {
       const cleaned = saved.filter((item) =>
         item.id !== 'morning' &&
         item.id !== 'small-things' &&
         item.title !== 'A slower Tuesday' &&
-        !item.body?.includes('I left my phone at home and took the long way back from the market')
+        item.title !== 'The morning walk' &&
+        item.title !== 'Small things I noticed' &&
+        !item.body?.includes('I left my phone at home and took the long way back from the market') &&
+        !item.body?.includes('The streets were quiet before everyone else woke') &&
+        !item.body?.includes('A warm cup, a blue notebook, rain against the window')
       )
       return cleaned.length ? cleaned : seedEntries
     }
@@ -397,7 +413,16 @@ export default function App() {
   const [cloudRetry, setCloudRetry] = useState(0)
   const [cloudSyncRetry, setCloudSyncRetry] = useState(0)
   const [selectedId, setSelectedId] = useState(() => localStorage.getItem('solace-selected') || 'today')
-  const [view, setView] = useState('landing')
+  const [view, setView] = useState(() => {
+    try {
+      const guest = localStorage.getItem('solace-guest-user')
+      const profile = localStorage.getItem('solace-profile')
+      if (guest || (profile && profile !== 'Alex Morgan')) {
+        return loadStartView()
+      }
+    } catch {}
+    return 'landing'
+  })
   const [settingsTab, setSettingsTab] = useState('account')
   const [startView, setStartView] = useState(loadStartView)
   const [miraVisible, setMiraVisible] = useState(() => localStorage.getItem('solace-mira-visible') !== 'false')
@@ -425,7 +450,7 @@ export default function App() {
     } catch {}
     return defaultMessages
   })
-  const [profileName, setProfileName] = useState(() => localStorage.getItem('solace-profile') || 'Alex Morgan')
+  const [profileName, setProfileName] = useState(() => { const saved = localStorage.getItem('solace-profile'); return (saved && saved !== 'Alex Morgan') ? saved : '' })
   const [profileSubtitle, setProfileSubtitle] = useState(() => localStorage.getItem('solace-profile-subtitle') || 'Personal journal')
   const [profileAvatar, setProfileAvatar] = useState(() => localStorage.getItem('solace-profile-avatar') || null)
   const [companionName, setCompanionName] = useState(() => localStorage.getItem('solace-companion-name') || 'Mira')
@@ -550,7 +575,7 @@ export default function App() {
 
   const selectedEntry = entries.find((item) => item.id === selectedId) || entries[0]
   const entry = selectedEntry?.body || ''
-  const profileInitials = profileName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+  const profileInitials = (profileName || 'You').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'U'
   const isSignedIn = !!(authUser || guestUser)
 
   useEffect(() => {
@@ -1417,7 +1442,7 @@ export default function App() {
             {profileAvatar
               ? <img className="solace-avatar solace-avatar-img" src={profileAvatar} alt={profileName} />
               : <span className="solace-avatar">{profileInitials}</span>}
-            <div><p>{profileName}</p><span>{profileSubtitle}</span></div>
+            <div><p>{profileName || 'Your journal'}</p><span>{profileSubtitle}</span></div>
             <button aria-label="Open settings" onClick={() => setView('settings')}><MoreHorizontal size={16} /></button>
           </div>
         </div>
@@ -1913,6 +1938,31 @@ export default function App() {
                   <p>Download your entries and saved {companionName} conversation as a JSON file.</p>
                 </div>
                 <button className="solace-settings-action" onClick={exportJournal}><Download size={14} />Export data</button>
+              </div>
+              <div className="solace-settings-row">
+                <div className="solace-settings-row-copy">
+                  <h3>Start fresh</h3>
+                  <p>Clear all entries, tags, and chats to start with a brand new, empty journal.</p>
+                </div>
+                <button
+                  className="solace-settings-action"
+                  type="button"
+                  onClick={() => {
+                    if (!window.confirm('Reset your journal to a clean slate? This will clear your current entries and start fresh.')) return
+                    localStorage.removeItem('solace-entries')
+                    localStorage.removeItem('solace-messages')
+                    localStorage.removeItem('solace-liked-days')
+                    localStorage.removeItem('solace-tag-colors')
+                    setEntries(seedEntries)
+                    setSelectedId('today')
+                    setMessages(getWelcomeMessages(null, profileName || 'friend'))
+                    setLikedDays([])
+                    setTagColors({})
+                    alert('Your journal has been reset to a clean slate.')
+                  }}
+                >
+                  Reset journal
+                </button>
               </div>
               <div className="solace-settings-row">
                 <div className="solace-settings-row-copy">
