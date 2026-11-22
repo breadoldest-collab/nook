@@ -1885,12 +1885,7 @@ export default function App() {
               }}>Find a pattern</button>
             </div>
           </details>
-          <div className="solace-companion-footer">
-            <p>{companionName} is here to support your reflection.</p>
-            <div className="solace-gemini-badge-wrap" title="Powered by Google Gemini">
-              <img src={`${import.meta.env.BASE_URL}gemini-badge.png`} alt="Powered by Google Gemini" className="solace-gemini-logo-img" />
-            </div>
-          </div>
+          <p className="solace-companion-note">{companionName} is here to support your reflection.</p>
         </div>
       </aside>
       </>}

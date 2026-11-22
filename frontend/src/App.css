@@ -900,46 +900,9 @@ body {
   display: block;
 }
 
-.solace-companion-footer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.solace-companion-footer p {
-  margin: 0;
+.solace-companion-note {
+  margin: 12px 0 0;
   font-size: 11px;
   color: var(--text-muted, #728080);
-}
-
-.solace-gemini-badge-wrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: #1a1728;
-  border: 1px solid rgba(134, 59, 255, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  transition: opacity 180ms ease, transform 180ms ease;
-}
-
-.solace-gemini-badge-wrap:hover {
-  transform: translateY(-1px);
-  border-color: rgba(134, 59, 255, 0.5);
-}
-
-.solace-app[data-theme="light"] .solace-gemini-badge-wrap {
-  background: #201a33;
-  border-color: rgba(134, 59, 255, 0.25);
-}
-
-.solace-gemini-logo-img {
-  height: 18px;
-  width: auto;
-  border-radius: 4px;
-  object-fit: contain;
-  display: block;
+  text-align: center;
 }
