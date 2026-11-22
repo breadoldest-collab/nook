@@ -55,7 +55,10 @@ const GEMINI_MODEL = 'models/gemini-flash-lite-latest'
 
 async function askGemini(companionName, conversationHistory, currentEntryBody, userMessage, customKey) {
   const activeKey = customKey || (typeof window !== "undefined" ? localStorage.getItem("solace-gemini-key") : null) || GEMINI_API_KEY
-  if (!activeKey) return null
+  if (!activeKey) {
+    console.warn('[Nook] No Gemini API key found. Add your key in Settings -> Companion.')
+    return null
+  }
   const entryContext = currentEntryBody?.trim()
     ? `The user is currently writing this journal entry:\n"""\n${currentEntryBody.slice(0, 1500)}\n"""\n\n`
     : ''
@@ -848,6 +851,7 @@ export default function App() {
         if (lower.includes('reflect')) reply = 'What part of today felt easiest to carry, and what part would you rather set down?'
         else if (lower.includes('pattern')) reply = 'We can look for a pattern together. Which feeling or theme keeps returning across your recent entries?'
         else if (/sad|anxious|tired|overwhelmed|stress/.test(lower)) reply = 'That sounds heavy. Stay with what you need right now—one small, kind next step may be enough.'
+        else if (!geminiApiKey && !GEMINI_API_KEY) reply = "I'm ready to reflect with you! To enable live AI responses, add your Gemini API key in Settings → Companion."
         else reply = 'Thank you for sharing that. We can keep it here and return to it gently whenever you are ready.'
       }
       setMessages((current) => [...current, { role: 'companion', text: reply }])
