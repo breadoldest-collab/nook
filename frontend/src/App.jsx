@@ -9,6 +9,8 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Database,
   Download,
   Eye,
@@ -35,21 +37,34 @@ import { isSupabaseConfigured, supabase } from './lib/supabaseClient'
 import SplashCursor from './components/SplashCursor'
 import './App.css'
 
-const initialEntry = `Today felt softer than usual. I left my phone at home and took the long way back from the market. The air had that almost-rain smell, and for once I didn’t feel the need to hurry through it.
+function createBlankEntry(id = 'today', targetDate = new Date()) {
+  const dateStr = targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const timeStr = targetDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const isToday = getLocalDateKey(new Date()) === getLocalDateKey(targetDate)
+  return {
+    id,
+    title: '',
+    date: isToday ? `Today · ${timeStr}` : `${dateStr} at ${timeStr}`,
+    dateKey: getLocalDateKey(targetDate),
+    body: '',
+    tags: [],
+    favorite: false,
+    chatMessages: [],
+  }
+}
 
-I’m noticing how much space appears when I stop trying to fill every quiet moment. Maybe that is enough for today.`
+const seedEntries = [createBlankEntry('today')]
 
-const seedEntries = [
-  { id: 'today', title: 'A slower Tuesday', date: 'Today · 9:42 AM', body: initialEntry, tags: ['reflection', 'gratitude'], favorite: false },
-  { id: 'morning', title: 'The morning walk', date: 'Yesterday', body: 'The streets were quiet before everyone else woke. I walked without headphones and noticed the trees turning toward the light.', tags: ['gratitude'], favorite: true },
-  { id: 'small-things', title: 'Small things I noticed', date: 'May 18, 2024', body: 'A warm cup, a blue notebook, rain against the window. Small things deserve to be remembered.', tags: ['ideas'], favorite: false },
-]
-
-const defaultMessages = [
-  { role: 'companion', text: 'It sounds like you found a little more breathing room today. What did the quiet make possible?' },
-  { role: 'user', text: 'I noticed details I usually rush past. It made the walk feel like its own small experience.' },
-  { role: 'companion', text: 'That sounds meaningful. I’ll remember that slowing down helped you notice what was already there.' },
-]
+function getWelcomeMessages(entry = null, name = 'friend') {
+  const subject = entry?.title ? ` for "${entry.title}"` : ''
+  return [
+    {
+      role: 'companion',
+      text: `Hello ${name}. I'm here to listen, reflect, or help write your journal${subject}. What's on your mind today?`
+    }
+  ]
+}
+const defaultMessages = getWelcomeMessages(null, 'friend')
 const splashCursorColors = {
   light: ['#171717'],
   dark: ['#e8e8e8'],
@@ -72,7 +87,7 @@ async function askGemini(companionName, conversationHistory, currentEntryBody, u
   ).join('\n')
 
   const nameIntro = userName
-    ? `The user's name is "${userName}". Always address them by their name warmly when appropriate or when they ask what their name is (their name is ${userName}).`
+    ? `The user's name is "${userName}". Address them by their name warmly whenever appropriate, and if they ask what their name is, who they are, or who you are talking to, explicitly and clearly tell them that their name is "${userName}".`
     : ''
   const imageIntro = entryAttachment
     ? `The user has attached an image to their current journal entry. Look closely at this image and refer to what is in the picture warmly, specifically, and perceptively when relevant.`
@@ -96,10 +111,7 @@ ${recentHistory}`
       const [meta, base64] = entryAttachment.split(',')
       const mimeType = meta.split(';')[0].replace('data:', '') || 'image/jpeg'
       parts.push({
-        inline_data: {
-          mime_type: mimeType,
-          data: base64,
-        },
+        inlineData: { mimeType, data: base64 },
       })
     } catch (e) {
       console.warn('[Nook] Could not parse entry attachment:', e)
@@ -246,9 +258,11 @@ function NookDropdown({ ariaLabel, className = '', menuTitle, onChange, options,
   )
 }
 
-function getTagTone(tag) {
+function getTagTone(tag, customColors = {}) {
+  if (customColors && customColors[tag]) return customColors[tag]
   const hash = [...tag].reduce((total, character) => total + character.charCodeAt(0), 0)
-  return ['sage', 'rose', 'sky', 'amber'][hash % 4]
+  const tones = ['sage', 'rose', 'sky', 'amber', 'violet', 'slate', 'teal']
+  return tones[hash % tones.length]
 }
 
 function getDraftTitle(body) {
@@ -345,10 +359,17 @@ function loadStartView() {
 function loadEntries() {
   try {
     const saved = JSON.parse(localStorage.getItem('solace-entries'))
-    return Array.isArray(saved) && saved.length ? saved : seedEntries
-  } catch {
-    return seedEntries
-  }
+    if (Array.isArray(saved) && saved.length) {
+      const cleaned = saved.filter((item) =>
+        item.id !== 'morning' &&
+        item.id !== 'small-things' &&
+        item.title !== 'A slower Tuesday' &&
+        !item.body?.includes('I left my phone at home and took the long way back from the market')
+      )
+      return cleaned.length ? cleaned : seedEntries
+    }
+  } catch {}
+  return seedEntries
 }
 
 
@@ -445,6 +466,24 @@ export default function App() {
   const [editingTagValue, setEditingTagValue] = useState('')
   const [newGlobalTag, setNewGlobalTag] = useState('')
   const tagPickerRef = useRef(null)
+
+  const [tagColors, setTagColors] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('solace-tag-colors'))
+      return saved && typeof saved === 'object' ? saved : {}
+    } catch {
+      return {}
+    }
+  })
+  const [selectedTagTone, setSelectedTagTone] = useState('sage')
+
+  const setCustomTagColor = (tag, tone) => {
+    setTagColors((current) => {
+      const next = { ...current, [tag]: tone }
+      try { localStorage.setItem('solace-tag-colors', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
 
   const allTags = [...new Set(entries.flatMap((item) => item.tags))].filter(Boolean).sort()
 
@@ -894,23 +933,20 @@ export default function App() {
     }
   }
 
-  const createEntry = () => {
-    const id = `entry-${Date.now()}`
-    const now = new Date()
-    const next = {
-      id,
-      title: '',
-      date: now.toLocaleString('en-US', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
-      dateKey: getLocalDateKey(now),
-      body: '',
-      tags: [],
-      favorite: false,
+  const createEntry = (targetDate = new Date()) => {
+    const newId = 'entry-' + Date.now()
+    const freshChat = getWelcomeMessages(null, profileName)
+    const blank = {
+      ...createBlankEntry(newId, targetDate),
+      chatMessages: freshChat,
     }
-    persistEntries([next, ...entries])
-    setSelectedId(id)
+    const next = [blank, ...entries]
+    persistEntries(next)
+    setSelectedId(newId)
+    setMessages(freshChat)
     setView('today')
     setCalendarDate(null)
-    requestAnimationFrame(() => editorRef.current?.focus())
+    setOptionsOpen(false)
   }
 
   const createEntryRef = useRef(createEntry)
@@ -945,6 +981,13 @@ export default function App() {
     setView('today')
     setCalendarDate(null)
     setOptionsOpen(false)
+    const target = entries.find((item) => item.id === id)
+    if (target) {
+      const activeMsgs = target.chatMessages && target.chatMessages.length
+        ? target.chatMessages
+        : getWelcomeMessages(target, profileName)
+      setMessages(activeMsgs)
+    }
   }
 
   
@@ -1025,7 +1068,11 @@ export default function App() {
           else reply = "I couldn't reach the reflection service right now. Please try again in a moment."
         }
       }
-      setMessages((current) => [...current, { role: 'companion', text: reply }])
+      setMessages((current) => {
+        const next = [...current, { role: 'companion', text: reply }]
+        updateEntry({ chatMessages: next })
+        return next
+      })
     } catch (err) {
       if (err?.name === 'AbortError') return
       console.error('[Nook sendMessage error]:', err)
@@ -1169,17 +1216,24 @@ export default function App() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const recorder = new MediaRecorder(stream)
       chunksRef.current = []
-      recorder.ondataavailable = (event) => event.data.size && chunksRef.current.push(event.data)
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) chunksRef.current.push(event.data)
+      }
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop())
-        const url = URL.createObjectURL(new Blob(chunksRef.current, { type: 'audio/webm' }))
-        updateEntry({ audioUrl: url, audioName: 'Voice note' })
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
+        const reader = new FileReader()
+        reader.onload = () => {
+          updateEntry({ audioUrl: reader.result, audioName: 'Voice reflection' })
+        }
+        reader.readAsDataURL(blob)
       }
       mediaRecorderRef.current = recorder
       recorder.start()
       setRecording(true)
-    } catch {
-      window.alert('Microphone access was not granted.')
+    } catch (err) {
+      console.error('[Nook] Audio recording error:', err)
+      window.alert('Could not access microphone: ' + (err.message || 'Permission denied'))
     }
   }
 
@@ -1356,7 +1410,7 @@ export default function App() {
           </div>
           <div className="solace-tags">
             {[...new Set(entries.flatMap((item) => item.tags))].map((tag) => (
-              <button key={tag} className={`tag-tone-${getTagTone(tag)}`} onClick={() => { setSearch(tag); setSearchOpen(true) }}>{tag}</button>
+              <button key={tag} className={`tag-tone-${getTagTone(tag, tagColors)}`} onClick={() => { setSearch(tag); setSearchOpen(true) }}>{tag}</button>
             ))}
           </div>
           <div className="solace-profile" onClick={() => setView('settings')} role="button" tabIndex={0} style={{ cursor: 'pointer' }} title="Open settings">
@@ -1547,7 +1601,7 @@ export default function App() {
                       ) : (
                         <button
                           type="button"
-                          className={`tag-tone-${getTagTone(tag)}`}
+                          className={`tag-tone-${getTagTone(tag, tagColors)}`}
                           onClick={() => {
                             setArchiveTag(tag)
                             setView('entries')
@@ -1560,6 +1614,17 @@ export default function App() {
                       <span className="solace-tag-card-count">{count} {count === 1 ? 'entry' : 'entries'}</span>
                     </div>
 
+                    <div className="solace-tag-card-colors">
+                      {['sage', 'rose', 'sky', 'amber', 'violet', 'slate', 'teal'].map((tone) => (
+                        <button
+                          key={tone}
+                          type="button"
+                          className={`solace-tag-color-dot tone-${tone} ${getTagTone(tag, tagColors) === tone ? 'active' : ''}`}
+                          onClick={() => setCustomTagColor(tag, tone)}
+                          title={`Set ${tone} color`}
+                        />
+                      ))}
+                    </div>
                     <div className="solace-tag-card-actions">
                       {isEditing ? (
                         <>
@@ -1907,6 +1972,11 @@ export default function App() {
               <p>Find your way back to a day worth remembering.</p>
             </header>
             <div className="solace-archive-toolbar">
+              <div className="solace-calendar-nav-controls">
+                <button type="button" className="solace-cal-nav-btn" title="Previous month" aria-label="Previous month" onClick={() => { setArchiveMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1)); setCalendarDate(null) }}><ChevronLeft size={16} /></button>
+                <button type="button" className="solace-cal-today-btn" title="Jump to today" onClick={() => { const now = new Date(); setArchiveMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setCalendarDate(getLocalDateKey(now)) }}>Today</button>
+                <button type="button" className="solace-cal-nav-btn" title="Next month" aria-label="Next month" onClick={() => { setArchiveMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1)); setCalendarDate(null) }}><ChevronRight size={16} /></button>
+              </div>
               <div className="solace-archive-period" ref={archivePeriodRef}>
                 <div className="solace-archive-picker">
                   <button
@@ -1999,16 +2069,55 @@ export default function App() {
             </div>}
             {archiveMode === 'calendar' ? (
               <>
+                <div className="solace-calendar-stats">
+                  <span><strong>{monthEntries.length}</strong> {monthEntries.length === 1 ? 'entry' : 'entries'} this month</span>
+                  <span><strong>{monthEntries.filter((e) => e.favorite).length}</strong> liked</span>
+                  <span><strong>{new Set(monthEntries.flatMap((e) => e.tags || [])).size}</strong> active tags</span>
+                </div>
                 <div className="solace-archive-calendar" role="grid" aria-label={`${archiveMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} entries`}>
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <div className="solace-archive-weekday" key={day}>{day}</div>)}
                   {calendarDays.map(({ date, key, inMonth }) => {
                     const dayEntries = monthEntries.filter((item) => getEntryDateKey(item) === key)
+                    const hasLiked = dayEntries.some((item) => item.favorite) || likedDays.includes(key)
+                    const dayTags = Array.from(new Set(dayEntries.flatMap((item) => item.tags || [])))
                     return (
                       <section className={`solace-archive-day ${inMonth ? '' : 'outside'} ${calendarDate === key ? 'selected' : ''}`} role="gridcell" key={key}>
-                        <button className={`solace-archive-day-number ${getLocalDateKey(new Date()) === key ? 'today' : ''}`} type="button" aria-label={`Filter ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`} aria-pressed={calendarDate === key} onClick={() => {
-                          if (!inMonth) setArchiveMonth(new Date(date.getFullYear(), date.getMonth(), 1))
-                          setCalendarDate((selected) => selected === key ? null : key)
-                        }}>{date.getDate()}</button>
+                        <div className="solace-archive-day-top">
+                          <button className={`solace-archive-day-number ${getLocalDateKey(new Date()) === key ? 'today' : ''}`} type="button" aria-label={`Filter ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`} aria-pressed={calendarDate === key} onClick={() => {
+                            if (!inMonth) setArchiveMonth(new Date(date.getFullYear(), date.getMonth(), 1))
+                            setCalendarDate((selected) => selected === key ? null : key)
+                          }}>{date.getDate()}</button>
+                          <div className="solace-archive-day-indicators">
+                            {hasLiked && (
+                              <span className="solace-cal-liked-icon" title="Liked day">
+                                <Heart size={11} fill="currentColor" color="#e05368" />
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="solace-cal-quick-add"
+                              title="Add entry for this date"
+                              aria-label={`Add entry for ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                createEntry(date)
+                              }}
+                            >
+                              <Plus size={12} />
+                            </button>
+                          </div>
+                        </div>
+                        {dayTags.length > 0 && (
+                          <div className="solace-cal-tag-dots">
+                            {dayTags.slice(0, 4).map((tag) => (
+                              <span
+                                key={tag}
+                                className={`solace-calendar-tag-dot tag-tone-${getTagTone(tag, tagColors)}`}
+                                title={tag}
+                              />
+                            ))}
+                          </div>
+                        )}
                         {dayEntries.slice(0, 3).map((item) => (
                           <button key={item.id} className="solace-archive-day-entry" type="button" title={item.title || 'Untitled entry'} onClick={() => selectEntry(item.id)}>{item.title || 'Untitled entry'}</button>
                         ))}
@@ -2115,7 +2224,7 @@ export default function App() {
               <button
                 key={tag}
                 type="button"
-                className={`tag-tone-${getTagTone(tag)}`}
+                className={`tag-tone-${getTagTone(tag, tagColors)}`}
                 aria-label={`Remove ${tag} tag`}
                 title="Click to remove tag"
                 onClick={() => toggleTagOnEntry(tag)}
@@ -2151,7 +2260,7 @@ export default function App() {
                       <button
                         key={tag}
                         type="button"
-                        className={`solace-tag-picker-item tag-tone-${getTagTone(tag)} ${isAttached ? 'selected' : ''}`}
+                        className={`solace-tag-picker-item tag-tone-${getTagTone(tag, tagColors)} ${isAttached ? 'selected' : ''}`}
                         onClick={() => toggleTagOnEntry(tag)}
                       >
                         <span>{tag}</span>
@@ -2164,28 +2273,43 @@ export default function App() {
                   )}
                 </div>
 
-                <form
-                  className="solace-tag-picker-create"
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    const val = tagDraft.trim().toLowerCase()
-                    if (val) {
-                      toggleTagOnEntry(val)
-                      setTagDraft('')
-                    }
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={tagDraft}
-                    onChange={(e) => setTagDraft(e.target.value)}
-                    placeholder="New tag..."
-                    autoFocus
-                  />
-                  <button type="submit" aria-label="Add tag" disabled={!tagDraft.trim()}>
-                    <Plus size={14} />
-                  </button>
-                </form>
+                <div className="solace-tag-color-palette">
+                    <span>Tag color:</span>
+                    <div className="solace-tag-color-swatches">
+                      {['sage', 'rose', 'sky', 'amber', 'violet', 'slate', 'teal'].map((tone) => (
+                        <button
+                          key={tone}
+                          type="button"
+                          className={`solace-tag-color-dot tone-${tone} ${selectedTagTone === tone ? 'active' : ''}`}
+                          onClick={() => setSelectedTagTone(tone)}
+                          title={tone}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <form
+                    className="solace-tag-picker-create"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      const val = tagDraft.trim().toLowerCase()
+                      if (val) {
+                        setCustomTagColor(val, selectedTagTone)
+                        toggleTagOnEntry(val)
+                        setTagDraft('')
+                      }
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={tagDraft}
+                      onChange={(e) => setTagDraft(e.target.value)}
+                      placeholder="New tag..."
+                      autoFocus
+                    />
+                    <button type="submit" aria-label="Add tag" disabled={!tagDraft.trim()}>
+                      <Plus size={14} />
+                    </button>
+                  </form>
               </div>
             )}
           </div>
@@ -2225,7 +2349,20 @@ export default function App() {
               </button>
             </div>
           )}
-          {selectedEntry?.audioUrl && <audio className="solace-audio" controls src={selectedEntry.audioUrl} />}
+          {selectedEntry?.audioUrl && (
+            <div className="solace-audio-wrapper">
+              <audio className="solace-audio" controls src={selectedEntry.audioUrl} />
+              <button
+                type="button"
+                className="solace-audio-delete-btn"
+                onClick={() => updateEntry({ audioUrl: null, audioName: null })}
+                title="Delete voice note"
+                aria-label="Delete voice note"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          )}
 
           <div className="solace-editor-footer">
             <div className="solace-editor-tools">

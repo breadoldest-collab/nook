@@ -1469,3 +1469,209 @@ body {
   border-color: rgba(192, 57, 43, 0.3);
   background: rgba(192, 57, 43, 0.08);
 }
+
+
+/* --- EXTENDED TAG TONES --- */
+.tag-tone-violet { border-color: #e8dff0 !important; color: #8e73a2 !important; background: #f7f2fb !important; }
+.tag-tone-slate { border-color: #dee3e6 !important; color: #78848f !important; background: #f2f5f7 !important; }
+.tag-tone-teal { border-color: #d9ebe8 !important; color: #4b8f88 !important; background: #eef7f5 !important; }
+
+.solace-app[data-theme="dark"] .tag-tone-violet { border-color: #43334c !important; color: #cbafd9 !important; background: #231b28 !important; }
+.solace-app[data-theme="dark"] .tag-tone-slate { border-color: #3b4247 !important; color: #bdc5cb !important; background: #1e2225 !important; }
+.solace-app[data-theme="dark"] .tag-tone-teal { border-color: #2e4743 !important; color: #9cd4cc !important; background: #192725 !important; }
+
+/* Tag color swatches */
+.solace-tag-color-palette {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 6px;
+  font-size: 11px;
+  color: #7a8894;
+}
+
+.solace-tag-color-swatches,
+.solace-tag-card-colors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.solace-tag-color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease;
+  padding: 0;
+}
+
+.solace-tag-color-dot:hover {
+  transform: scale(1.2);
+}
+
+.solace-tag-color-dot.active {
+  border-color: #202932;
+  transform: scale(1.15);
+}
+
+.solace-app[data-theme="dark"] .solace-tag-color-dot.active {
+  border-color: #fff;
+}
+
+.solace-tag-color-dot.tone-sage { background: #668873; }
+.solace-tag-color-dot.tone-rose { background: #a87880; }
+.solace-tag-color-dot.tone-sky { background: #648aa1; }
+.solace-tag-color-dot.tone-amber { background: #9b835b; }
+.solace-tag-color-dot.tone-violet { background: #8e73a2; }
+.solace-tag-color-dot.tone-slate { background: #78848f; }
+.solace-tag-color-dot.tone-teal { background: #4b8f88; }
+
+/* --- CALENDAR IMPROVEMENTS --- */
+.solace-calendar-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.solace-cal-nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(120, 140, 150, 0.22);
+  color: #6a7985;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.solace-cal-nav-btn:hover {
+  background: rgba(120, 140, 150, 0.08);
+  color: var(--text, #202932);
+}
+
+.solace-cal-today-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid rgba(120, 140, 150, 0.22);
+  color: #5c6c78;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.solace-cal-today-btn:hover {
+  background: rgba(120, 140, 150, 0.1);
+  color: var(--text, #202932);
+}
+
+.solace-calendar-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 20px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: rgba(120, 140, 150, 0.05);
+  border: 1px solid rgba(120, 140, 150, 0.12);
+  font-size: 12px;
+  color: #71818d;
+}
+
+.solace-calendar-stats strong {
+  color: var(--text, #202932);
+}
+
+.solace-archive-day-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.solace-archive-day-indicators {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.solace-cal-liked-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.solace-cal-quick-add {
+  opacity: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(120, 140, 150, 0.12);
+  color: #6a7985;
+  border: none;
+  cursor: pointer;
+  transition: opacity 160ms ease, background 160ms ease;
+}
+
+.solace-archive-day:hover .solace-cal-quick-add {
+  opacity: 1;
+}
+
+.solace-cal-quick-add:hover {
+  background: #202932;
+  color: #fff;
+}
+
+.solace-cal-tag-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.solace-cal-tag-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.solace-archive-day.is-today {
+  border-color: rgba(120, 160, 190, 0.4);
+}
+
+/* Audio wrapper in editor */
+.solace-audio-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.solace-audio-delete-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(192, 57, 43, 0.2);
+  background: transparent;
+  color: #c0392b;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.solace-audio-delete-btn:hover {
+  background: rgba(192, 57, 43, 0.08);
+}
