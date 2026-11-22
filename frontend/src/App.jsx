@@ -13,6 +13,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  Heart,
   Image,
   List,
   Mic,
@@ -22,7 +23,9 @@ import {
   Search,
   Settings2,
   Sparkles,
+  Square,
   Sun,
+  Trash2,
   UserRound,
   X,
 } from 'lucide-react'
@@ -53,31 +56,71 @@ const splashCursorColors = {
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
 const GEMINI_MODEL = 'models/gemini-flash-lite-latest'
 
-async function askGemini(companionName, conversationHistory, currentEntryBody, userMessage, customKey) {
+async function askGemini(companionName, conversationHistory, currentEntryBody, userMessage, customKey, userName, entryAttachment, signal) {
   const activeKey = customKey || (typeof window !== "undefined" ? localStorage.getItem("solace-gemini-key") : null) || GEMINI_API_KEY
   if (!activeKey) {
     console.warn('[Nook] No Gemini API key found. Add your key in Settings -> Companion.')
     return null
   }
   const entryContext = currentEntryBody?.trim()
-    ? `The user is currently writing this journal entry:\n"""\n${currentEntryBody.slice(0, 1500)}\n"""\n\n`
+    ? `The user is currently writing this journal entry:\n"""\n${currentEntryBody.slice(0, 2000)}\n"""\n\n`
     : ''
   const recentHistory = conversationHistory.slice(-10).map((m) =>
-    `${m.role === 'user' ? 'User' : companionName}: ${m.text}`
+    `${m.role === 'user' ? (userName || 'User') : companionName}: ${m.text}`
   ).join('\n')
-  const systemPrompt = `You are ${companionName}, a warm, emotionally perceptive, mindful journaling companion embedded in Nook. Your role is to gently support the user's self-reflection with kindness and empathy. Keep replies short (1-2 sentences), warm, and grounded. Never give clinical advice. Understand what they wrote in their journal entry and refer to it naturally when appropriate.\n\n${entryContext}Recent conversation:\n${recentHistory}`
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 15000)
+  const nameIntro = userName
+    ? `The user's name is "${userName}". Always address them by their name warmly when appropriate or when they ask what their name is (their name is ${userName}).`
+    : ''
+  const imageIntro = entryAttachment
+    ? `The user has attached an image to their current journal entry. Look closely at this image and refer to what is in the picture warmly, specifically, and perceptively when relevant.`
+    : ''
+
+  const systemPrompt = `You are ${companionName}, a warm, emotionally perceptive, mindful journaling companion embedded in Nook.
+${nameIntro}
+${imageIntro}
+Your role is to support the user's reflection, creativity, and self-expression with kindness and empathy.
+IMPORTANT CAPABILITY:
+You CAN and SHOULD write, draft, expand, rewrite, or continue journal entries whenever ${userName || 'the user'} asks you to! If they ask you to write an entry, suggest an entry, draft their thoughts, or help write their journal, happily write a thoughtful, heartfelt, beautifully phrased journal entry for them. Never say "I can't write your entries for you" — you are a creative co-writer and supportive companion here to write entries whenever requested.
+For general conversational questions or reflections, keep replies warm and concise (1-3 sentences). When asked to compose or draft a journal entry, write a full, evocative entry with rich sensory details.
+Never give clinical advice.
+
+${entryContext}Recent conversation:
+${recentHistory}`
+
+  const parts = []
+  if (entryAttachment && typeof entryAttachment === 'string' && entryAttachment.startsWith('data:image/')) {
+    try {
+      const [meta, base64] = entryAttachment.split(',')
+      const mimeType = meta.split(';')[0].replace('data:', '') || 'image/jpeg'
+      parts.push({
+        inline_data: {
+          mime_type: mimeType,
+          data: base64,
+        },
+      })
+    } catch (e) {
+      console.warn('[Nook] Could not parse entry attachment:', e)
+    }
+  }
+  parts.push({ text: userMessage })
+
+  const timeoutController = new AbortController()
+  const timeoutId = setTimeout(() => timeoutController.abort(), 25000)
+
+  if (signal) {
+    signal.addEventListener('abort', () => clearTimeout(timeoutId))
+  }
+
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${GEMINI_MODEL}:generateContent?key=${activeKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
+      signal: signal || timeoutController.signal,
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-        generationConfig: { maxOutputTokens: 140, temperature: 0.7 },
+        contents: [{ role: 'user', parts }],
+        generationConfig: { maxOutputTokens: 800, temperature: 0.7 },
       }),
     })
     clearTimeout(timeoutId)
@@ -90,10 +133,15 @@ async function askGemini(companionName, conversationHistory, currentEntryBody, u
     return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null
   } catch (err) {
     clearTimeout(timeoutId)
+    if (err?.name === 'AbortError' || signal?.aborted) {
+      console.log('[Nook] Generation stopped by user.')
+      return '__STOPPED__'
+    }
     console.error('[Nook Gemini fetch failed]:', err)
     return null
   }
 }
+
 
 function loadGuestUser() {
   try {
@@ -359,6 +407,36 @@ export default function App() {
   const [profileAvatar, setProfileAvatar] = useState(() => localStorage.getItem('solace-profile-avatar') || null)
   const [companionName, setCompanionName] = useState(() => localStorage.getItem('solace-companion-name') || 'Mira')
   const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('solace-gemini-key') || '')
+  const [likedDays, setLikedDays] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('solace-liked-days'))
+      return Array.isArray(saved) ? saved : []
+    } catch {
+      return []
+    }
+  })
+  const toggleLikeDay = (dateKey) => {
+    if (!dateKey) return
+    setLikedDays((current) => {
+      const next = current.includes(dateKey)
+        ? current.filter((k) => k !== dateKey)
+        : [...current, dateKey]
+      try { localStorage.setItem('solace-liked-days', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+  const [imageContextMenu, setImageContextMenu] = useState(null)
+  const contextMenuRef = useRef(null)
+  const abortControllerRef = useRef(null)
+
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+    setMiraTyping(false)
+  }
+
   const [tagComposerOpen, setTagComposerOpen] = useState(false)
   const [tagDraft, setTagDraft] = useState('')
   const [recording, setRecording] = useState(false)
@@ -409,6 +487,16 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('solace-profile', profileName)
+    const saved = localStorage.getItem('solace-guest-user')
+    if (saved) {
+      try {
+        const u = JSON.parse(saved)
+        if (u.username !== profileName) {
+          u.username = profileName
+          localStorage.setItem('solace-guest-user', JSON.stringify(u))
+        }
+      } catch {}
+    }
   }, [profileName])
 
   useEffect(() => {
@@ -816,6 +904,21 @@ export default function App() {
     setOptionsOpen(false)
   }
 
+  
+  useEffect(() => {
+    if (!imageContextMenu) return
+    const closeMenu = (e) => {
+      if (contextMenuRef.current && contextMenuRef.current.contains(e.target)) return
+      setImageContextMenu(null)
+    }
+    window.addEventListener('click', closeMenu)
+    window.addEventListener('contextmenu', closeMenu)
+    return () => {
+      window.removeEventListener('click', closeMenu)
+      window.removeEventListener('contextmenu', closeMenu)
+    }
+  }, [imageContextMenu])
+
   const filteredEntries = entries.filter((item) => {
     if (calendarDate && getEntryDateKey(item) !== calendarDate) return false
     if (!search.trim()) return true
@@ -849,8 +952,12 @@ export default function App() {
     setMessage('')
     setMiraTyping(true)
     const currentMessages = [...messages, userMsg]
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+    const activeUserName = profileName || guestUser?.username || 'friend'
     try {
-      const aiReply = await askGemini(companionName, currentMessages, entry, text, geminiApiKey)
+      const aiReply = await askGemini(companionName, currentMessages, entry, text, geminiApiKey, activeUserName, selectedEntry?.attachment, controller.signal)
+      if (aiReply === '__STOPPED__') return
       let reply = aiReply
       if (!reply) {
         const activeKey = geminiApiKey || (typeof window !== "undefined" ? localStorage.getItem("solace-gemini-key") : null) || GEMINI_API_KEY
@@ -866,9 +973,11 @@ export default function App() {
       }
       setMessages((current) => [...current, { role: 'companion', text: reply }])
     } catch (err) {
+      if (err?.name === 'AbortError') return
       console.error('[Nook sendMessage error]:', err)
       setMessages((current) => [...current, { role: 'companion', text: "I'm here with you. Take your time." }])
     } finally {
+      abortControllerRef.current = null
       setMiraTyping(false)
     }
   }
@@ -1162,6 +1271,7 @@ export default function App() {
             <button className={view === 'today' ? 'active' : ''} onClick={openToday}><Sun size={15} />Today</button>
             <button className={view === 'entries' ? 'active' : ''} onClick={() => { setCalendarDate(null); setView('entries') }}><BookOpen size={15} />All entries</button>
             <button className={view === 'favorites' ? 'active' : ''} onClick={() => { setCalendarDate(null); setView('favorites') }}><Bookmark size={15} />Favorites</button>
+            <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}><Settings2 size={15} />Settings</button>
           </nav>
 
           <section className="solace-recent">
@@ -1191,7 +1301,7 @@ export default function App() {
               <button key={tag} className={`tag-tone-${getTagTone(tag)}`} onClick={() => { setSearch(tag); setSearchOpen(true) }}>{tag}</button>
             ))}
           </div>
-          <div className="solace-profile">
+          <div className="solace-profile" onClick={() => setView('settings')} role="button" tabIndex={0} style={{ cursor: 'pointer' }} title="Open settings">
             {profileAvatar
               ? <img className="solace-avatar solace-avatar-img" src={profileAvatar} alt={profileName} />
               : <span className="solace-avatar">{profileInitials}</span>}
@@ -1334,11 +1444,11 @@ export default function App() {
             </header>
 
             <nav className="solace-settings-tabs" aria-label="Settings categories">
-              <button aria-current={settingsTab === 'account' ? 'location' : undefined} className={settingsTab === 'account' ? 'active' : ''} onClick={() => accountSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><UserRound size={15} />Account</button>
-              <button aria-current={settingsTab === 'appearance' ? 'location' : undefined} className={settingsTab === 'appearance' ? 'active' : ''} onClick={() => appearanceSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Palette size={15} />Appearance</button>
-              <button aria-current={settingsTab === 'journal' ? 'location' : undefined} className={settingsTab === 'journal' ? 'active' : ''} onClick={() => journalSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><BookOpen size={15} />Journal</button>
-              <button aria-current={settingsTab === 'mira' ? 'location' : undefined} className={settingsTab === 'mira' ? 'active' : ''} onClick={() => miraSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Sparkles size={15} />{companionName}</button>
-              <button aria-current={settingsTab === 'data' ? 'location' : undefined} className={settingsTab === 'data' ? 'active' : ''} onClick={() => dataSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Database size={15} />Data</button>
+              <button aria-current={settingsTab === 'account' ? 'location' : undefined} className={settingsTab === 'account' ? 'active' : ''} onClick={() => { setSettingsTab('account'); accountSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}><UserRound size={15} />Account</button>
+              <button aria-current={settingsTab === 'appearance' ? 'location' : undefined} className={settingsTab === 'appearance' ? 'active' : ''} onClick={() => { setSettingsTab('appearance'); appearanceSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}><Palette size={15} />Appearance</button>
+              <button aria-current={settingsTab === 'journal' ? 'location' : undefined} className={settingsTab === 'journal' ? 'active' : ''} onClick={() => { setSettingsTab('journal'); journalSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}><BookOpen size={15} />Journal</button>
+              <button aria-current={settingsTab === 'mira' ? 'location' : undefined} className={settingsTab === 'mira' ? 'active' : ''} onClick={() => { setSettingsTab('mira'); miraSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}><Sparkles size={15} />{companionName}</button>
+              <button aria-current={settingsTab === 'data' ? 'location' : undefined} className={settingsTab === 'data' ? 'active' : ''} onClick={() => { setSettingsTab('data'); dataSettingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}><Database size={15} />Data</button>
             </nav>
 
             <section id="settings-account" ref={accountSettingsRef} className="solace-settings-card" aria-labelledby="settings-account-heading">
@@ -1425,7 +1535,7 @@ export default function App() {
                 </div>
                 <label className="solace-settings-field">
                   <span className="solace-visually-hidden">Your name</span>
-                  <input aria-label="Your name" value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Your name" />
+                  <input aria-label="Your name" value={profileName} onChange={(event) => { const val = event.target.value; setProfileName(val); setGuestUser((current) => current ? { ...current, username: val } : current); }} placeholder="Your name" />
                 </label>
               </div>
               <div className="solace-settings-row">
@@ -1752,7 +1862,25 @@ export default function App() {
               <div className="solace-archive-list">
                 {Object.entries(archiveGroups).map(([dateKey, dayEntries]) => (
                   <section className="solace-archive-list-day" key={dateKey}>
-                    <header><h2>{new Date(`${dateKey}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h2><span>{dayEntries.length} {dayEntries.length === 1 ? 'entry' : 'entries'}</span></header>
+                    <header>
+                      <div className="solace-archive-day-heading">
+                        <h2>{new Date(`${dateKey}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
+                        <button
+                          type="button"
+                          className={`solace-like-day-btn ${likedDays.includes(dateKey) ? 'liked' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleLikeDay(dateKey)
+                          }}
+                          title={likedDays.includes(dateKey) ? 'Unlike this day' : 'Like this day'}
+                          aria-label={likedDays.includes(dateKey) ? 'Unlike this day' : 'Like this day'}
+                        >
+                          <Heart size={14} fill={likedDays.includes(dateKey) ? '#e05656' : 'none'} color={likedDays.includes(dateKey) ? '#e05656' : 'currentColor'} />
+                          <span>{likedDays.includes(dateKey) ? 'Liked day' : 'Like day'}</span>
+                        </button>
+                      </div>
+                      <span>{dayEntries.length} {dayEntries.length === 1 ? 'entry' : 'entries'}</span>
+                    </header>
                     {dayEntries.map((item) => (
                       <button className="solace-archive-entry" key={item.id} type="button" onClick={() => selectEntry(item.id)}>
                         <span className="solace-archive-entry-copy"><strong>{item.title || 'Untitled entry'}</strong><span>{item.date}</span></span>
@@ -1770,7 +1898,21 @@ export default function App() {
       <main id="today" className="solace-editor">
         <div className={`solace-editor-inner ${wordCount < 3 ? 'solace-editor-inner-quiet' : ''}`}>
           <header className="solace-entry-header">
-            <div><p className="solace-date">{selectedEntry?.date}</p><h1><input
+            <div><div className="solace-date-row">
+                <p className="solace-date">{selectedEntry?.date}</p>
+                {getEntryDateKey(selectedEntry) && (
+                  <button
+                    type="button"
+                    className={`solace-like-day-btn ${likedDays.includes(getEntryDateKey(selectedEntry)) ? 'liked' : ''}`}
+                    onClick={() => toggleLikeDay(getEntryDateKey(selectedEntry))}
+                    title={likedDays.includes(getEntryDateKey(selectedEntry)) ? 'Unlike this day' : 'Like this day'}
+                    aria-label={likedDays.includes(getEntryDateKey(selectedEntry)) ? 'Unlike this day' : 'Like this day'}
+                  >
+                    <Heart size={14} fill={likedDays.includes(getEntryDateKey(selectedEntry)) ? '#e05656' : 'none'} color={likedDays.includes(getEntryDateKey(selectedEntry)) ? '#e05656' : 'currentColor'} />
+                    <span>{likedDays.includes(getEntryDateKey(selectedEntry)) ? 'Liked day' : 'Like day'}</span>
+                  </button>
+                )}
+              </div><h1><input
               className="solace-entry-title"
               type="text"
               aria-label="Entry title"
@@ -1824,7 +1966,32 @@ export default function App() {
             updateEntry({ body, title, finished: false })
           }} placeholder="Start with whatever is present." />
 
-          {selectedEntry?.attachment && <img className="solace-attachment" src={selectedEntry.attachment} alt={selectedEntry.attachmentName || 'Entry attachment'} />}
+          {selectedEntry?.attachment && (
+            <div
+              className="solace-attachment-container"
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setImageContextMenu({ x: e.clientX, y: e.clientY })
+              }}
+            >
+              <img
+                className="solace-attachment"
+                src={selectedEntry.attachment}
+                alt={selectedEntry.attachmentName || 'Entry attachment'}
+                title="Right-click to delete image"
+              />
+              <button
+                type="button"
+                className="solace-attachment-delete-badge"
+                onClick={() => updateEntry({ attachment: null, attachmentName: null })}
+                aria-label="Delete image"
+                title="Delete image"
+              >
+                <X size={14} />
+                <span>Delete image</span>
+              </button>
+            </div>
+          )}
           {selectedEntry?.audioUrl && <audio className="solace-audio" controls src={selectedEntry.audioUrl} />}
 
           <div className="solace-editor-footer">
@@ -1841,6 +2008,25 @@ export default function App() {
         </div>
       </main>
       )}
+      {imageContextMenu && (
+        <div
+          className="solace-context-menu"
+          style={{ left: `${imageContextMenu.x}px`, top: `${imageContextMenu.y}px` }}
+          ref={contextMenuRef}
+        >
+          <button
+            type="button"
+            className="danger"
+            onClick={() => {
+              updateEntry({ attachment: null, attachmentName: null })
+              setImageContextMenu(null)
+            }}
+          >
+            <Trash2 size={14} /> Delete image
+          </button>
+        </div>
+      )}
+
 
       {view !== 'settings' && view !== 'landing' && view !== 'entries' && view !== 'favorites' && miraVisible && <>
       <div
@@ -1872,6 +2058,19 @@ export default function App() {
             <div key={index} className={`solace-message ${item.role}`}>
               {item.role === 'companion' && <div className="solace-mira-icon"><Sparkles size={13} /></div>}
               <div>{item.text}</div>
+                {item.role === 'companion' && (
+                  <button
+                    type="button"
+                    className="solace-insert-btn"
+                    onClick={() => {
+                      const newBody = entry ? `${entry}\n\n${item.text}` : item.text
+                      updateEntry({ body: newBody })
+                    }}
+                    title="Insert this into your journal entry"
+                  >
+                    + Add to entry
+                  </button>
+                )}
             </div>
           ))}
           {miraTyping && (
@@ -1885,7 +2084,19 @@ export default function App() {
         <div className="solace-chat-compose">
           <div className="solace-input-row">
             <input aria-label={`Message ${companionName}`} value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && !miraTyping && sendMessage()} placeholder={`Talk to ${companionName}...`} disabled={miraTyping} />
-            <button aria-label="Send message" onClick={() => sendMessage()} disabled={miraTyping}><ArrowUp size={15} /></button>
+            {miraTyping ? (
+              <button
+                type="button"
+                className="solace-stop-btn"
+                aria-label="Stop generating"
+                title="Stop generating"
+                onClick={stopGeneration}
+              >
+                <Square size={13} fill="currentColor" />
+              </button>
+            ) : (
+              <button aria-label="Send message" onClick={() => sendMessage()} disabled={!message.trim()}><ArrowUp size={15} /></button>
+            )}
           </div>
           <details className="solace-suggestions" ref={reflectionIdeasRef}>
             <summary><Sparkles size={13} />Reflection ideas</summary>

@@ -907,3 +907,177 @@ body {
   color: var(--text-muted, #728080);
   text-align: center;
 }
+
+/* Date row and Like Day button */
+.solace-date-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.solace-like-day-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid rgba(120, 140, 150, 0.25);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  color: var(--text-muted, #78858e);
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.solace-like-day-btn:hover {
+  background: rgba(224, 86, 86, 0.08);
+  border-color: rgba(224, 86, 86, 0.4);
+  color: #e05656;
+}
+
+.solace-like-day-btn.liked {
+  border-color: rgba(224, 86, 86, 0.35);
+  background: rgba(224, 86, 86, 0.1);
+  color: #e05656;
+  font-weight: 500;
+}
+
+.solace-archive-day-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Stop generation button in companion */
+.solace-stop-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #171717;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.solace-stop-btn:hover {
+  background: #333;
+  transform: scale(1.05);
+}
+
+.solace-app[data-theme="dark"] .solace-stop-btn {
+  background: #f5f5f5;
+  color: #171717;
+}
+
+.solace-app[data-theme="dark"] .solace-stop-btn:hover {
+  background: #fff;
+}
+
+/* Insert into journal button */
+.solace-insert-btn {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #7b8f9e;
+  background: transparent;
+  border: 1px dashed rgba(123, 143, 158, 0.35);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.solace-insert-btn:hover {
+  background: rgba(123, 143, 158, 0.12);
+  color: var(--text, #202932);
+  border-style: solid;
+}
+
+/* Attachment container with right click and hover delete */
+.solace-attachment-container {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 20px;
+}
+
+.solace-attachment-container .solace-attachment {
+  margin-top: 0;
+  cursor: context-menu;
+}
+
+.solace-attachment-delete-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(23, 27, 30, 0.85);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 180ms ease, background 180ms ease;
+}
+
+.solace-attachment-container:hover .solace-attachment-delete-badge {
+  opacity: 1;
+}
+
+.solace-attachment-delete-badge:hover {
+  background: #c0392b;
+}
+
+/* Custom Context Menu for right clicking image */
+.solace-context-menu {
+  position: fixed;
+  z-index: 10000;
+  background: var(--bg, #fff);
+  border: 1px solid rgba(120, 140, 150, 0.2);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  min-width: 140px;
+}
+
+.solace-context-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text, #202932);
+  text-align: left;
+}
+
+.solace-context-menu button:hover {
+  background: rgba(120, 140, 150, 0.08);
+}
+
+.solace-context-menu button.danger {
+  color: #c0392b;
+}
+
+.solace-context-menu button.danger:hover {
+  background: rgba(192, 57, 43, 0.08);
+}
+
+.solace-app[data-theme="dark"] .solace-context-menu {
+  background: #1e2225;
+  border-color: #33383d;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
