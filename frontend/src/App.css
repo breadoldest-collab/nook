@@ -881,8 +881,8 @@ body {
 
 /* Brand and Gemini Logo styling */
 .solace-brand-icon {
-  width: 30px !important;
-  height: 30px !important;
+  width: 32px !important;
+  height: 32px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -890,14 +890,15 @@ body {
   background: #000 !important;
   overflow: hidden !important;
   flex-shrink: 0 !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  padding: 3px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 .solace-brand-logo-img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
 }
 
 .solace-companion-note {
