@@ -68,7 +68,7 @@ async function askGemini(companionName, conversationHistory, currentEntryBody, u
   const systemPrompt = `You are ${companionName}, a warm, emotionally perceptive, mindful journaling companion embedded in Nook. Your role is to gently support the user's self-reflection with kindness and empathy. Keep replies short (1-2 sentences), warm, and grounded. Never give clinical advice. Understand what they wrote in their journal entry and refer to it naturally when appropriate.\n\n${entryContext}Recent conversation:\n${recentHistory}`
 
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 6000)
+  const timeoutId = setTimeout(() => controller.abort(), 15000)
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${GEMINI_MODEL}:generateContent?key=${activeKey}`, {
       method: 'POST',
@@ -81,11 +81,16 @@ async function askGemini(companionName, conversationHistory, currentEntryBody, u
       }),
     })
     clearTimeout(timeoutId)
-    if (!res.ok) return null
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error('[Nook Gemini API error]:', res.status, errorText)
+      return null
+    }
     const data = await res.json()
     return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null
-  } catch {
+  } catch (err) {
     clearTimeout(timeoutId)
+    console.error('[Nook Gemini fetch failed]:', err)
     return null
   }
 }
@@ -353,6 +358,7 @@ export default function App() {
   const [profileSubtitle, setProfileSubtitle] = useState(() => localStorage.getItem('solace-profile-subtitle') || 'Personal journal')
   const [profileAvatar, setProfileAvatar] = useState(() => localStorage.getItem('solace-profile-avatar') || null)
   const [companionName, setCompanionName] = useState(() => localStorage.getItem('solace-companion-name') || 'Mira')
+  const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('solace-gemini-key') || '')
   const [tagComposerOpen, setTagComposerOpen] = useState(false)
   const [tagDraft, setTagDraft] = useState('')
   const [recording, setRecording] = useState(false)
@@ -847,15 +853,20 @@ export default function App() {
       const aiReply = await askGemini(companionName, currentMessages, entry, text, geminiApiKey)
       let reply = aiReply
       if (!reply) {
-        const lower = text.toLowerCase()
-        if (lower.includes('reflect')) reply = 'What part of today felt easiest to carry, and what part would you rather set down?'
-        else if (lower.includes('pattern')) reply = 'We can look for a pattern together. Which feeling or theme keeps returning across your recent entries?'
-        else if (/sad|anxious|tired|overwhelmed|stress/.test(lower)) reply = 'That sounds heavy. Stay with what you need right now—one small, kind next step may be enough.'
-        else if (!geminiApiKey && !GEMINI_API_KEY) reply = "I'm ready to reflect with you! To enable live AI responses, add your Gemini API key in Settings → Companion."
-        else reply = 'Thank you for sharing that. We can keep it here and return to it gently whenever you are ready.'
+        const activeKey = geminiApiKey || (typeof window !== "undefined" ? localStorage.getItem("solace-gemini-key") : null) || GEMINI_API_KEY
+        if (!activeKey) {
+          reply = "I'm ready to reflect with you! To enable live AI responses, add your Gemini API key in Settings → Companion."
+        } else {
+          const lower = text.toLowerCase()
+          if (lower.includes('reflect')) reply = 'What part of today felt easiest to carry, and what part would you rather set down?'
+          else if (lower.includes('pattern')) reply = 'We can look for a pattern together. Which feeling or theme keeps returning across your recent entries?'
+          else if (/sad|anxious|tired|overwhelmed|stress/.test(lower)) reply = 'That sounds heavy. Stay with what you need right now—one small, kind next step may be enough.'
+          else reply = "I couldn't reach the reflection service right now. Please try again in a moment."
+        }
       }
       setMessages((current) => [...current, { role: 'companion', text: reply }])
-    } catch {
+    } catch (err) {
+      console.error('[Nook sendMessage error]:', err)
       setMessages((current) => [...current, { role: 'companion', text: "I'm here with you. Take your time." }])
     } finally {
       setMiraTyping(false)
