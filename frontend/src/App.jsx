@@ -397,7 +397,50 @@ function NookBrandIcon() {
   )
 }
 
+function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.82) {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onerror = () => resolve(null)
+    reader.onload = (e) => {
+      const img = new window.Image()
+      img.onerror = () => resolve(null)
+      img.onload = () => {
+        let { width, height } = img
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function App() {
+  const [toast, setToast] = useState('')
+  const toastTimerRef = useRef(null)
+  const showToast = (message) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast(message)
+    toastTimerRef.current = setTimeout(() => setToast(''), 3200)
+  }
+
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', confirmText: 'Confirm', isDanger: false, onConfirm: null })
+  const askConfirm = (title, message, onConfirm, confirmText = 'Confirm', isDanger = false) => {
+    setConfirmModal({ open: true, title, message, onConfirm, confirmText, isDanger })
+  }
+  const closeConfirm = () => {
+    setConfirmModal((prev) => ({ ...prev, open: false }))
+  }
+
   const [theme, setTheme] = useState(() => localStorage.getItem('solace-theme') || 'light')
   const [entries, setEntries] = useState(loadEntries)
   const [authUser, setAuthUser] = useState(null)
@@ -528,12 +571,20 @@ export default function App() {
   }
 
   const deleteTag = (tagToDelete) => {
-    if (!window.confirm(`Delete tag "${tagToDelete}" from all entries?`)) return
-    const nextEntries = entries.map((item) => {
-      if (!item.tags.includes(tagToDelete)) return item
-      return { ...item, tags: item.tags.filter((t) => t !== tagToDelete) }
-    })
-    persistEntries(nextEntries)
+    askConfirm(
+      'Delete Tag',
+      `Delete tag "${tagToDelete}" from all entries?`,
+      () => {
+        const nextEntries = entries.map((item) => {
+          if (!item.tags.includes(tagToDelete)) return item
+          return { ...item, tags: item.tags.filter((t) => t !== tagToDelete) }
+        })
+        persistEntries(nextEntries)
+        showToast(`Tag "${tagToDelete}" deleted`)
+      },
+      'Delete',
+      true
+    )
   }
 
   const toggleTagOnEntry = (tag) => {
@@ -910,7 +961,7 @@ export default function App() {
     try {
       localStorage.setItem('solace-entries', JSON.stringify(entriesToPersist))
     } catch {
-      window.alert('This browser could not save all entry data. Large attachments may need to be removed.')
+      showToast('Storage limit reached. Try removing large images.')
     }
   }
 
@@ -1126,13 +1177,24 @@ export default function App() {
   }
 
   const deleteGuestAccount = () => {
-    if (!window.confirm('Delete your guest account? This will clear your local journal data permanently.')) return
-    localStorage.clear()
-    setGuestUser(null)
-    setGuestUsername('')
-    setEntries(seedEntries)
-    setMessages(defaultMessages)
-    setView('landing')
+    askConfirm(
+      'Delete Account',
+      'Delete your guest account? This will permanently clear all your local journal data from this browser.',
+      () => {
+        localStorage.clear()
+        setGuestUser(null)
+        setGuestUsername('')
+        setProfileName('')
+        setLikedDays([])
+        setTagColors({})
+        setEntries(seedEntries)
+        setMessages(defaultMessages)
+        setView('landing')
+        showToast('Account deleted')
+      },
+      'Delete Permanently',
+      true
+    )
   }
 
   const exportJournal = () => {
@@ -1152,20 +1214,33 @@ export default function App() {
     URL.revokeObjectURL(url)
   }
 
-  const uploadAvatar = (event) => {
+  const uploadAvatar = async (event) => {
     const file = event.target.files?.[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) { window.alert('Image must be under 2 MB.'); return }
-    const reader = new FileReader()
-    reader.onload = (e) => setProfileAvatar(e.target.result)
-    reader.readAsDataURL(file)
+    const compressed = await compressImage(file, 400, 400, 0.85)
+    if (compressed) {
+      setProfileAvatar(compressed)
+      showToast('Profile photo updated')
+    } else {
+      showToast('Could not load image')
+    }
+    event.target.value = ''
   }
 
   const removeAvatar = () => setProfileAvatar(null)
 
   const resetMiraConversation = () => {
-    if (!window.confirm('Reset Mira’s conversation? This only clears the saved chat history.')) return
-    setMessages(defaultMessages)
+    askConfirm(
+      `Reset ${companionName} Conversation`,
+      `Reset conversation with ${companionName}? This clears chat history for this entry.`,
+      () => {
+        setMessages(getWelcomeMessages(selectedEntry, profileName))
+        updateEntry({ chatMessages: [] })
+        showToast('Chat history reset')
+      },
+      'Reset Chat',
+      true
+    )
   }
 
   const finishEntry = () => {
@@ -1193,38 +1268,46 @@ export default function App() {
 
   const deleteEntry = () => {
     if (entries.length === 1) return
-    if (!window.confirm(`Delete “${selectedEntry.title}”?`)) return
-    if (authUser) {
-      try {
-        const deletedIds = getUserDeletedEntryIds(authUser.id)
-        if (!deletedIds.includes(selectedEntry.id)) {
-          localStorage.setItem(
-            `solace-deleted-entry-ids-${authUser.id}`,
-            JSON.stringify([...deletedIds, selectedEntry.id]),
-          )
+    askConfirm(
+      'Delete Entry',
+      `Delete "${selectedEntry.title || 'Untitled entry'}"? This cannot be undone.`,
+      () => {
+        if (authUser) {
+          try {
+            const deletedIds = getUserDeletedEntryIds(authUser.id)
+            if (!deletedIds.includes(selectedEntry.id)) {
+              localStorage.setItem(
+                `solace-deleted-entry-ids-${authUser.id}`,
+                JSON.stringify([...deletedIds, selectedEntry.id]),
+              )
+            }
+          } catch (error) {
+            showToast(`Cloud sync warning: ${error.message}`)
+            return
+          }
         }
-      } catch (error) {
-        window.alert(`Could not safely save this deletion for cloud sync: ${error.message}`)
-        return
-      }
-    }
-    const next = entries.filter((item) => item.id !== selectedEntry.id)
-    persistEntries(next)
-    setSelectedId(next[0].id)
-    setOptionsOpen(false)
+        const next = entries.filter((item) => item.id !== selectedEntry.id)
+        persistEntries(next)
+        setSelectedId(next[0].id)
+        setOptionsOpen(false)
+        showToast('Entry deleted')
+      },
+      'Delete',
+      true
+    )
   }
 
-  const attachImage = (event) => {
+  const attachImage = async (event) => {
     const file = event.target.files?.[0]
     if (!file) return
-    if (file.size > 2500000) {
-      window.alert('Please choose an image smaller than 2.5 MB.')
-      event.target.value = ''
-      return
+    const compressed = await compressImage(file, 1200, 1200, 0.82)
+    if (compressed) {
+      updateEntry({ attachment: compressed, attachmentName: file.name })
+      showToast('Image attached')
+    } else {
+      showToast('Could not load image')
     }
-    const reader = new FileReader()
-    reader.onload = () => updateEntry({ attachment: reader.result, attachmentName: file.name })
-    reader.readAsDataURL(file)
+    event.target.value = ''
   }
 
   const toggleRecording = async () => {
@@ -1234,7 +1317,7 @@ export default function App() {
       return
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      window.alert('Audio recording is not supported by this browser.')
+      showToast('Audio recording is not supported by this browser.')
       return
     }
     try {
@@ -1258,7 +1341,7 @@ export default function App() {
       setRecording(true)
     } catch (err) {
       console.error('[Nook] Audio recording error:', err)
-      window.alert('Could not access microphone: ' + (err.message || 'Permission denied'))
+      showToast('Could not access microphone: ' + (err.message || 'Permission denied'))
     }
   }
 
@@ -1949,17 +2032,24 @@ export default function App() {
                   className="solace-settings-action"
                   type="button"
                   onClick={() => {
-                    if (!window.confirm('Reset your journal to a clean slate? This will clear your current entries and start fresh.')) return
-                    localStorage.removeItem('solace-entries')
-                    localStorage.removeItem('solace-messages')
-                    localStorage.removeItem('solace-liked-days')
-                    localStorage.removeItem('solace-tag-colors')
-                    setEntries(seedEntries)
-                    setSelectedId('today')
-                    setMessages(getWelcomeMessages(null, profileName || 'friend'))
-                    setLikedDays([])
-                    setTagColors({})
-                    alert('Your journal has been reset to a clean slate.')
+                    askConfirm(
+                      'Reset Journal',
+                      'Reset your journal to a clean slate? This will clear all entries, tags, and conversations.',
+                      () => {
+                        localStorage.removeItem('solace-entries')
+                        localStorage.removeItem('solace-messages')
+                        localStorage.removeItem('solace-liked-days')
+                        localStorage.removeItem('solace-tag-colors')
+                        setEntries(seedEntries)
+                        setSelectedId('today')
+                        setMessages(getWelcomeMessages(null, profileName || 'friend'))
+                        setLikedDays([])
+                        setTagColors({})
+                        showToast('Journal reset to clean slate')
+                      },
+                      'Reset All',
+                      true
+                    )
                   }}
                 >
                   Reset journal
@@ -2549,6 +2639,35 @@ export default function App() {
         </div>
       </aside>
       </>}
-    </div>
+    
+      {toast && (
+        <div className="solace-toast" role="status">
+          <span>{toast}</span>
+        </div>
+      )}
+
+      {confirmModal.open && (
+        <div className="solace-modal-backdrop" onClick={closeConfirm}>
+          <div className="solace-modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <h3>{confirmModal.title}</h3>
+            <p>{confirmModal.message}</p>
+            <div className="solace-modal-actions">
+              <button type="button" className="solace-modal-btn" onClick={closeConfirm}>Cancel</button>
+              <button
+                type="button"
+                className={`solace-modal-btn ${confirmModal.isDanger ? 'solace-modal-btn-danger' : 'solace-modal-btn-confirm'}`}
+                onClick={() => {
+                  const action = confirmModal.onConfirm
+                  closeConfirm()
+                  if (action) action()
+                }}
+              >
+                {confirmModal.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+</div>
   )
 }
