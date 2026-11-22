@@ -1875,7 +1875,8 @@ export default function App() {
                   <input
                     aria-label="Companion name"
                     value={companionName}
-                    onChange={(event) => setCompanionName(event.target.value.trim() || 'Mira')}
+                    onChange={(event) => setCompanionName(event.target.value)}
+                    onBlur={() => { if (!companionName.trim()) setCompanionName('Mira') }}
                     placeholder="e.g. Mira"
                     maxLength={24}
                   />
