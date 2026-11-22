@@ -51,7 +51,7 @@ const splashCursorColors = {
 }
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
-const GEMINI_MODEL = 'models/gemini-flash-latest'
+const GEMINI_MODEL = 'models/gemini-flash-lite-latest'
 
 async function askGemini(companionName, conversationHistory, currentEntryBody, userMessage, customKey) {
   const activeKey = customKey || (typeof window !== "undefined" ? localStorage.getItem("solace-gemini-key") : null) || GEMINI_API_KEY
@@ -1863,7 +1863,7 @@ export default function App() {
           )}
           {messages.length > 1 && (
             <button className="solace-conversation-toggle" onClick={() => setConversationExpanded((expanded) => !expanded)}>
-              {conversationExpanded ? 'Show latest reflection' : `Show conversation · ${messages.length} messages`}
+              {conversationExpanded ? 'Show recent reflections' : `Show earlier reflections · ${messages.length} messages`}
             </button>
           )}
         </div>

@@ -915,31 +915,31 @@ body {
 }
 
 .solace-gemini-badge-wrap {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: rgba(23, 27, 30, 0.04);
-  transition: opacity 180ms ease, background 180ms ease;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #1a1728;
+  border: 1px solid rgba(134, 59, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: opacity 180ms ease, transform 180ms ease;
 }
 
 .solace-gemini-badge-wrap:hover {
-  background: rgba(23, 27, 30, 0.08);
+  transform: translateY(-1px);
+  border-color: rgba(134, 59, 255, 0.5);
 }
 
-.solace-app[data-theme="dark"] .solace-gemini-badge-wrap {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.solace-app[data-theme="dark"] .solace-gemini-badge-wrap:hover {
-  background: rgba(255, 255, 255, 0.1);
+.solace-app[data-theme="light"] .solace-gemini-badge-wrap {
+  background: #201a33;
+  border-color: rgba(134, 59, 255, 0.25);
 }
 
 .solace-gemini-logo-img {
-  height: 16px;
+  height: 18px;
   width: auto;
-  border-radius: 3px;
+  border-radius: 4px;
   object-fit: contain;
   display: block;
 }
