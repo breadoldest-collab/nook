@@ -415,8 +415,7 @@ body {
 .solace-message { display: flex; gap: 12px; }
 .solace-message.user { justify-content: flex-end; }
 .solace-mira-icon { width: 28px; height: 28px; flex: 0 0 28px; }
-.solace-message > div:last-child { max-width: 245px; border-radius: 16px 16px 16px 4px; padding: 16px 20px; background: #f7f7f7; color: #68747d; font-size: 13px; line-height: 24px; }
-.solace-message.user > div { max-width: 235px; border-radius: 16px 16px 4px 16px; background: #f0f0f0; color: #5d8297; }
+/* Legacy nested message body styles removed to eliminate outer white box around chat bubbles */
 .solace-conversation-toggle { align-self: flex-start; padding: 4px 0; color: #9aa5ab; background: transparent; font-size: 11px; }
 .solace-chat-compose { margin-top: 24px; }
 .solace-suggestions { margin-top: 12px; }
@@ -547,8 +546,7 @@ body {
 .solace-app[data-theme="dark"] .solace-favorites-empty h2 { color: #e0e6e9; }
 .solace-app[data-theme="dark"] .solace-favorites-empty button { background: #c2d5de; color: #111719; }
 .solace-app[data-theme="dark"] .solace-favorites-empty button:hover { background: #d3e1e7; }
-.solace-app[data-theme="dark"] .solace-message > div:last-child { background: #171717; color: #c5cbd0; border: 1px solid #242424; box-shadow: none; }
-.solace-app[data-theme="dark"] .solace-message.user > div { background: #202020; color: #b5cbd7; }
+/* Legacy dark mode message wrapper styles removed */
 .solace-app[data-theme="dark"] .solace-entry-tags,
 .solace-app[data-theme="dark"] .solace-editor-footer,
 .solace-app[data-theme="dark"] .solace-prompt,
@@ -1111,10 +1109,20 @@ body {
   flex-direction: column;
   align-items: flex-start;
   max-width: 86%;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 .solace-message.user .solace-message-body {
   align-items: flex-end;
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 .solace-message-bubble {
