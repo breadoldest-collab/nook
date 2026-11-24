@@ -886,12 +886,12 @@ body {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  overflow: visible !important;
+  border-radius: 8px !important;
+  background: #000 !important;
+  overflow: hidden !important;
   flex-shrink: 0 !important;
-  padding: 0 !important;
-  box-shadow: none !important;
+  padding: 3px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 .solace-brand-logo-img {
