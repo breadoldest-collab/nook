@@ -49,7 +49,7 @@ body {
 .solace-sidebar {
   width: var(--sidebar-width, 240px); min-width: var(--sidebar-width, 240px); flex: 0 0 var(--sidebar-width, 240px); min-height: 100vh; display: flex; flex-direction: column;
   height: 100vh; overflow-y: auto;
-  box-sizing: border-box; padding: 32px; border-right: 1px solid #e5e5e5;
+  box-sizing: border-box; padding: 28px 20px; border-right: 1px solid #e5e5e5;
   background: #fff; box-shadow: 8px 0 30px rgba(0,0,0,.04);
 }
 .solace-resizer {
@@ -105,8 +105,8 @@ body {
 .solace-section-heading button { color: #b1b7bd; background: transparent; }
 .solace-section-actions { display: flex; align-items: flex-start; gap: 8px; }
 .solace-section-heading-filtered h2 { max-width: 100%; margin-right: 8px; font-size: 8px; letter-spacing: .08em; line-height: 1.5; }
-.solace-archive { flex: 1; min-width: 0; height: 100vh; overflow-y: auto; box-sizing: border-box; padding: 56px clamp(28px, 5vw, 72px) 72px; background: #fff; }
-.solace-archive-inner { max-width: 1060px; margin: 0 auto; }
+.solace-archive { flex: 1; min-width: 0; height: 100vh; overflow-y: auto; box-sizing: border-box; padding: 40px clamp(20px, 3.5vw, 48px) 64px; background: #fff; }
+.solace-archive-inner { max-width: min(1180px, 100%); margin: 0 auto; }
 .solace-archive-heading { margin-bottom: 34px; }
 .solace-archive-heading .solace-date { margin-bottom: 12px; letter-spacing: .16em; }
 .solace-archive-heading h1 { margin: 0; color: #202932; font-family: Georgia, serif; font-size: 42px; letter-spacing: -.04em; }
@@ -251,18 +251,18 @@ body {
 .solace-profile p { margin: 0; color: #555d64; font-size: 12px; }
 .solace-profile div span { color: #aeb5bb; font-size: 10px; }
 .solace-profile button { color: #b1b7bd; background: transparent; }
-.solace-editor { flex: 1; min-width: 0; height: 100vh; overflow-y: auto; background: #fff; padding: 44px 64px; }
-.solace-editor-inner { max-width: 760px; margin: 0 auto; }
+.solace-editor { flex: 1; min-width: 0; height: 100vh; overflow-y: auto; background: #fff; padding: 36px clamp(24px, 4vw, 56px); }
+.solace-editor-inner { max-width: min(980px, 100%); margin: 0 auto; }
 .solace-settings-open { height: auto; min-height: 100vh; overflow: visible; }
 .solace-login-open { display: block; height: auto; min-height: 100vh; overflow: visible; }
 .solace-login-page { position: relative; isolation: isolate; min-height: 100vh; display: flex; flex-direction: column; background-color: #fcfcfb; background-image: radial-gradient(ellipse at 18% 44%, rgba(233,239,235,.42), transparent 38%), radial-gradient(ellipse at 85% 72%, rgba(237,239,241,.34), transparent 34%); }
-.solace-login-topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; padding: 0 clamp(24px, 7vw, 100px); border-bottom: 1px solid #edf0f3; }
+.solace-login-topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; padding: 0 clamp(20px, 4vw, 56px); border-bottom: 1px solid #edf0f3; }
 .solace-login-topbar,
 .solace-login-content,
 .solace-login-footer { position: relative; z-index: 1; }
 .solace-login-topbar .solace-brand { font-size: 15px; }
 .solace-login-topbar-actions { display: flex; align-items: center; gap: 24px; }
-.solace-login-content { width: min(1050px, calc(100% - 56px)); flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 390px; align-items: center; gap: clamp(48px, 8vw, 112px); box-sizing: border-box; margin: 0 auto; padding: 64px 0 52px; }
+.solace-login-content { width: min(1180px, calc(100% - 48px)); flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 390px; align-items: center; gap: clamp(40px, 6vw, 96px); box-sizing: border-box; margin: 0 auto; padding: 52px 0 44px; }
 .solace-login-intro { max-width: 510px; }
 .solace-login-eyebrow { display: flex; align-items: center; gap: 9px; margin: 0 0 22px; color: #91a0a8; font-size: 10px; letter-spacing: .16em; }
 .solace-login-eyebrow span { width: 7px; height: 7px; border-radius: 50%; background: #9eb4a3; }
@@ -307,18 +307,18 @@ body {
 .solace-login-local-note { margin: 13px 0 0; color: #a0aaaf; font-size: 9px; line-height: 1.5; text-align: center; }
 .solace-login-footer { padding: 0 24px 24px; color: #a4adb1; font-size: 10px; text-align: center; }
 .solace-settings-page { flex: 1; min-width: 0; min-height: 100vh; box-sizing: border-box; background: #fff; }
-.solace-settings-topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; padding: 0 clamp(28px, 7vw, 100px); border-bottom: 1px solid #edf0f3; }
+.solace-settings-topbar { min-height: 70px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; padding: 0 clamp(20px, 4vw, 56px); border-bottom: 1px solid #edf0f3; }
 .solace-settings-topbar .solace-brand { font-size: 15px; }
-.solace-settings-inner { max-width: 700px; margin: 0 auto; padding: 44px 28px 72px; }
+.solace-settings-inner { max-width: min(980px, calc(100% - 48px)); margin: 0 auto; padding: 36px 0 64px; }
 .solace-settings-back { display: flex; align-items: center; gap: 8px; padding: 8px 0; color: #78838b; background: transparent; font-size: 12px; }
-.solace-settings-header { margin: 52px 0 32px; }
+.solace-settings-header { margin: 40px 0 28px; }
 .solace-settings-header .solace-date { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; letter-spacing: .16em; }
 .solace-settings-header h1 { margin: 0; color: #202932; font-family: Georgia, serif; font-size: 42px; letter-spacing: -.04em; }
 .solace-settings-header > p:last-child { margin: 12px 0 0; color: #929ba2; font-size: 13px; }
-.solace-settings-tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; width: fit-content; max-width: 100%; margin: 0 auto -1px; overflow-x: auto; border: 1px solid #e5ebef; border-radius: 12px 12px 0 0; padding: 7px 8px 0; background: #f7f9fa; }
+.solace-settings-tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; width: 100%; box-sizing: border-box; margin: 0 0 -1px; overflow-x: auto; border: 1px solid #e5ebef; border-radius: 12px 12px 0 0; padding: 8px 12px 0; background: #f7f9fa; }
 .solace-settings-tabs button { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; border-bottom: 2px solid transparent; padding: 12px 16px; color: #89949c; background: transparent; font-size: 12px; }
 .solace-settings-tabs button.active { border-bottom-color: #78a5c6; color: #344957; }
-.solace-settings-card { min-height: 250px; margin-bottom: 26px; scroll-margin-top: 82px; border: 1px solid #e5ebef; border-radius: 0 14px 14px 14px; padding: 28px 30px; background: #fff; box-shadow: 0 12px 32px rgba(27,48,62,.05); }
+.solace-settings-card { min-height: 250px; margin-bottom: 26px; scroll-margin-top: 82px; border: 1px solid #e5ebef; border-radius: 0 0 12px 12px; padding: 28px 32px; background: #fff; box-shadow: 0 12px 32px rgba(27,48,62,.05); }
 .solace-settings-card-header { padding-bottom: 22px; }
 .solace-settings-card-header h2 { margin: 0; color: #3e474e; font-size: 15px; font-weight: 600; }
 .solace-settings-card-header p { margin: 6px 0 0; color: #929ba2; font-size: 12px; }
@@ -360,7 +360,7 @@ body {
 .solace-entry-header { align-items: flex-start; position: relative; }
 .solace-date { margin: 0; color: #abb2b8; font-size: 12px; letter-spacing: .04em; }
 .solace-entry-header h1 { margin: 16px 0 0; font-family: Georgia, serif; font-size: 46px; line-height: 1.1; letter-spacing: -.04em; }
-.solace-entry-title { width: min(100%, 570px); border: 0; border-bottom: 1px solid transparent; padding: 0 0 2px; outline: 0; background: transparent; color: #202932; font-family: Georgia, serif !important; font-size: inherit !important; font-weight: 600; letter-spacing: inherit; line-height: inherit; transition: border-color 180ms ease; }
+.solace-entry-title { width: 100%; max-width: 100%; border: 0; border-bottom: 1px solid transparent; padding: 0 0 2px; outline: 0; background: transparent; color: #202932; font-family: Georgia, serif !important; font-size: inherit !important; font-weight: 600; letter-spacing: inherit; line-height: inherit; transition: border-color 180ms ease; }
 .solace-entry-title:hover { border-bottom-color: #e3e8eb; }
 .solace-entry-title:focus { border-bottom-color: #b8c5cc; }
 .solace-entry-title::placeholder { color: #aeb8bf; opacity: 1; }
@@ -403,7 +403,7 @@ body {
 .solace-prompt { margin-top: 36px; display: flex; align-items: center; gap: 10px; padding-top: 16px; color: #c1c8cc; }
 .solace-prompt p { margin: 0; color: #c0c6ca; font-size: 11px; }
 .solace-prompt span { color: #aeb7bd; }
-.solace-companion { width: var(--companion-width, 330px); min-width: var(--companion-width, 330px); flex: 0 0 var(--companion-width, 330px); height: 100vh; min-height: 600px; box-sizing: border-box; display: flex; flex-direction: column; padding: 40px; border-left: 1px solid #f0f2f3; background: #fdfdfc; box-shadow: none; }
+.solace-companion { width: var(--companion-width, 330px); min-width: var(--companion-width, 330px); flex: 0 0 var(--companion-width, 330px); height: 100vh; min-height: 600px; box-sizing: border-box; display: flex; flex-direction: column; padding: 32px 24px; border-left: 1px solid #f0f2f3; background: #fdfdfc; box-shadow: none; }
 .solace-companion header { display: flex; align-items: flex-start; justify-content: space-between; }
 .solace-companion-actions { display: flex; align-items: center; gap: 14px; }
 .solace-hide-mira { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: #9aa5ab; background: transparent; }
@@ -718,11 +718,11 @@ body {
   transition-duration: 240ms;
 }
 @media (max-width: 1180px) {
-  .solace-sidebar { width: 240px; min-width: 240px; flex-basis: auto; }
-  .solace-companion { width: 330px; min-width: 330px; flex-basis: auto; }
-  .solace-editor { padding: 44px 40px; }
+  .solace-sidebar { width: 220px; min-width: 220px; flex-basis: auto; }
+  .solace-companion { width: 300px; min-width: 300px; flex-basis: auto; }
+  .solace-editor { padding: 32px 24px; }
 }
-@media (max-width: 1180px) {
+@media (max-width: 860px) {
   .solace-app { height: auto; min-height: 100vh; overflow: visible; flex-direction: column; }
   .solace-sidebar { width: 100%; min-width: 0; min-height: auto; border-right: 0; border-bottom: 1px solid #e5e5e5; }
   .solace-resizer { display: none; }
@@ -1328,9 +1328,9 @@ body {
 }
 
 .solace-tags-inner {
-  max-width: 760px;
+  max-width: min(980px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 44px 32px 72px;
+  padding: 36px 0 64px;
 }
 
 .solace-tags-header {
